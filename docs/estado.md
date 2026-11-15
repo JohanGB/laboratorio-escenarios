@@ -1,0 +1,14 @@
+# Estado
+Fase 0 (datos + EDA): completa. Fase 1 (motor, sección 5): caso 1 implementado; faltan Monte Carlo, Shapley y comparador.
+- Datos: data/raw (inmutable) -> data/processed (trm, ipc, uvr, tasas, dtf, externas). Ver PROMPT sección 4; reporte EDA en reports/fase0.md.
+- Motor (src/laboratorio/motor/): supuestos (JSONL encadenado por hash, solo agregar; data/supuestos/registro.jsonl), ficha (hash datos/supuestos/código/semilla/resultado), cifras (cada número con fuente+hash), datos, plan, deterministas, historica, casos/compra_dolares.
+- Comando: `PYTHONPATH=src python -m laboratorio.motor compra_dolares` -> reports/compra_dolares.md + runs/<id>/ficha.json. Reproducir: `... reproducir runs/<id>/ficha.json`. `--actualizar-derivas` reestima derivas con datos nuevos.
+- Pruebas: `pytest -q -x` (las del caso copian el proyecto a un temporal).
+- Decisiones: hash de código = contenido de src/**/*.py (no es repo git; el commit es informativo si existe). Autor genérico "analista". Costo de hoy es cierto; P95 y P(superar presupuesto) salen de TODAS las ventanas históricas de flotación (empírico; ~29 sin traslape).
+- Supuestos del caso son ILUSTRATIVOS (meta 10.000 USD, 12 compras, margen 5 %): reemplazar por los reales agregando versión.
+- Derivas deterministas = percentiles 5/50/95 de la variación anual (datos). Ventanas con nombre (2015, oct-2022) son supuestos editables.
+- Lección: sembrar no debe pisar ediciones del usuario (corregido y probado).
+- Backtesting (sec. 6-7) APROBADO e implementado: origen móvil desde 2005-01-03, ventana expansiva, reajuste cada 21 obs., purga s+h≤t, embargo 63; horizontes 1/5/21/63; 11 cuantiles. PRUEBA FINAL desde 2020-01-01 (constante en backtest/particion.py; no se carga en desarrollo, `cargar_desarrollo` falla si ve datos ≥ corte). Banda NO se excluye.
+- Código: evaluacion/ (pinball, CRPS, cobertura, origen móvil; sin dependencias del dominio, con prueba), backtest/ (Vista, corredor, resumen), modelos/ (lineas_base: caminata, sim. histórica, EWMA; garch: GARCH/GJR/EGARCH-t; cuantiles: regresión por cuantiles y LightGBM; caracteristicas causales). Canario anti-fuga: tests/test_sin_fuga.py (agregar cada modelo nuevo a FABRICAS).
+- Diseño: QR/LightGBM predicen z=y_h/(σ_t√h) con σ EWMA 0,94. QR lineal NO usa niveles (fed, pol): subcobertura en simulación. LightGBM algo estrecho en muestras pequeñas (por medir con datos reales).
+- Fase 2 hecha: evaluacion/pruebas.py (Kupiec, Christoffersen, DM-HLN; probadas contra cálculo a mano). `python -m laboratorio.backtest correr|reporte` -> runs/backtest_desarrollo/ + reports/fase2.md. Resultado: todos los candidatos superan solo a h=1; descartados a h=5/21/63. GARCH/GJR: 38/28 reajustes sin converger (conservan parámetros previos) y persistencia ≈1 aceptada (IGARCH). Cola superior (alza del dólar) subcubierta a h=1 en casi todos. Pendiente: MCS, Monte Carlo por bloques, Shapley, comparador, casos 2 y 3.

@@ -1,0 +1,5 @@
+garch_t: 88 s, fallos=38
+gjr_t: 59 s, fallos=28
+egarch_t: 71 s, fallos=0
+reg_cuantiles: 599 s, fallos=0
+lightgbm_cuantiles: 208 s, fallos=0

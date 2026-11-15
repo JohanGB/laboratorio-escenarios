@@ -1,0 +1,82 @@
+{
+  "generado": "2026-11-15T02:19:30+00:00",
+  "archivos": [
+    {
+      "archivo": "banrep_suameca_consolidado_20261114.xlsx",
+      "url": "https://suameca.banrep.gov.co/descarga-multiple-de-datos/ (exportar a Excel; 16 series: politica monetaria",
+      "fecha_descarga": "2026-11-14",
+      "sha256": "9d39e0cc41b6f3df83887f6aadc6ba280c0b750bc46daa7e94f97e4408414512",
+      "bytes": 2542111,
+      "filas": 16029,
+      "series": 55,
+      "fecha_min": "1954-07-31",
+      "fecha_max": "2026-12-15"
+    },
+    {
+      "archivo": "brent_fred_dcoilbrenteu_20261114.csv",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DCOILBRENTEU",
+      "fecha_descarga": "2026-11-14",
+      "sha256": "24c21dcefd22454f23390f58e8472c6b8a3cdea283d6cc5b7cfade9fede1d985",
+      "bytes": 170465,
+      "filas": 10301,
+      "series": 1,
+      "fecha_min": "1987-05-20",
+      "fecha_max": "2026-11-11"
+    },
+    {
+      "archivo": "dolar_amplio_fred_dtwexbgs_20261114.csv",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DTWEXBGS",
+      "fecha_descarga": "2026-11-14",
+      "sha256": "448522e5b4b78d787e08edd86028dfe67a92c4aeab1aded9266304d6c71f19bc",
+      "bytes": 105029,
+      "filas": 5440,
+      "series": 1,
+      "fecha_min": "2006-01-02",
+      "fecha_max": "2026-11-06"
+    },
+    {
+      "archivo": "fed_funds_fred_dff_20261114.csv",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFF",
+      "fecha_descarga": "2026-11-14",
+      "sha256": "f2f56c719be375680b5d6310cf23fd2876e64be2f062bd670f5e0a3b5625bb59",
+      "bytes": 424763,
+      "filas": 26433,
+      "series": 1,
+      "fecha_min": "1954-07-01",
+      "fecha_max": "2026-11-12"
+    },
+    {
+      "archivo": "ipc_dane_indices_oct2026_20261114.xlsx",
+      "url": "https://www.dane.gov.co/files/operaciones/IPC/oct2026/anex-IPC-Indices-oct2026.xlsx",
+      "fecha_descarga": "2026-11-14",
+      "sha256": "4e8366bf2d03d4bdc15d14b1b21b12a6eec6c3695926abd503a430858ef74e2e",
+      "bytes": 40540,
+      "filas": 286,
+      "series": 1,
+      "fecha_min": "2003-01-31",
+      "fecha_max": "2026-10-31"
+    },
+    {
+      "archivo": "trm_banrep_20261114.xlsx",
+      "url": "https://suameca.banrep.gov.co/descarga-multiple-de-datos/ (serie TRM)",
+      "fecha_descarga": "2026-11-14",
+      "sha256": "d749d1affd14f73bdb8e85eeec07b145060bd77c26e729725db2e95a3c6d2f37",
+      "bytes": 522853,
+      "filas": 12775,
+      "series": 9,
+      "fecha_min": "1991-11-27",
+      "fecha_max": "2026-11-17"
+    },
+    {
+      "archivo": "trm_superfinanciera_20261114.csv",
+      "url": "https://www.datos.gov.co/api/views/32sa-8pi3/rows.csv?accessType=DOWNLOAD",
+      "fecha_descarga": "2026-11-14",
+      "sha256": "09a5712b75fa9dfd6f660af487357980817c317d902e1c17007337cb25d59730",
+      "bytes": 284168,
+      "filas": 8387,
+      "series": 1,
+      "fecha_min": "1991-12-02",
+      "fecha_max": "2026-11-14"
+    }
+  ]
+}

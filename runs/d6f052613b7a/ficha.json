@@ -1,0 +1,37 @@
+{
+  "caso": "compra_dolares",
+  "commit": null,
+  "creada_en": "2026-11-15T02:43:39+00:00",
+  "datos": {
+    "processed/trm.csv": "641393c5df0c869b0ad669d933b7196ebc0e402d5ee9727c598ba9c99ab45ee4",
+    "raw/trm_superfinanciera_20261114.csv": "09a5712b75fa9dfd6f660af487357980817c317d902e1c17007337cb25d59730"
+  },
+  "entorno": {
+    "numpy": "2.4.1",
+    "pandas": "3.0.0",
+    "plataforma": "Windows-10-10.0.26300-SP0",
+    "python": "3.11.9"
+  },
+  "hash_codigo": "8ac96d6514444c1f97217fedc50fa61bf2c8cd8a5dd1c652cf542d839e192aa9",
+  "hash_datos": "b53d48c551ce32e1389473b63483c09efa8ae7140d299c559deb97ea25b310d6",
+  "hash_entrada": "d6f052613b7ab7826164634b522533d89110451b6d9daab37af7992294134842",
+  "hash_ficha": "e570da89332b62687d6fbd0a369f12d68faa9edb1010be893bfb0dc7b4232444",
+  "hash_resultado": "dab321a52e99398326b9aa307dc540e2c5c3bc748e4e5fe2887890af41f75722",
+  "hash_supuestos": "e26cfb6730179e94360fdf1f59c77945de48ea6950a79c7d7355c9e4abb2e912",
+  "parametros": {
+    "modo": "determinista+historica"
+  },
+  "pins_supuestos": {
+    "caso.intervalo_meses": 1,
+    "caso.meta_usd": 1,
+    "caso.n_compras": 1,
+    "caso.presupuesto_margen_pct": 1,
+    "historica.desde": 1,
+    "historica.ventana.2015": 1,
+    "historica.ventana.fin_2022": 1,
+    "trm.deriva_anual_log.base": 1,
+    "trm.deriva_anual_log.estres": 1,
+    "trm.deriva_anual_log.optimista": 1
+  },
+  "semilla": null
+}

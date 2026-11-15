@@ -1,0 +1,6 @@
+__pycache__/
+.pytest_cache/
+.playwright-mcp/
+runs/**/*.csv.gz
+data/processed/
+*.pyc

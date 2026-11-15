@@ -1,0 +1,8 @@
+archivo,url,fecha_descarga,sha256,filas,rango_fechas
+trm_superfinanciera_20261114.csv,https://www.datos.gov.co/api/views/32sa-8pi3/rows.csv?accessType=DOWNLOAD,2026-11-14,09a5712b75fa9dfd6f660af487357980817c317d902e1c17007337cb25d59730,8387,1991-12-02..2026-11-14
+ipc_dane_indices_oct2026_20261114.xlsx,https://www.dane.gov.co/files/operaciones/IPC/oct2026/anex-IPC-Indices-oct2026.xlsx,2026-11-14,4e8366bf2d03d4bdc15d14b1b21b12a6eec6c3695926abd503a430858ef74e2e,matriz mes x año,2003-01..2026-10
+banrep_suameca_consolidado_20261114.xlsx,https://suameca.banrep.gov.co/descarga-multiple-de-datos/ (exportar a Excel; 16 series: politica monetaria, DTF 90d sem/mens, IBR on/1m/3m/6m/12m nominal+efectiva, UVR, IPC indice 1954+, inflacion anual),2026-11-14,9d39e0cc41b6f3df83887f6aadc6ba280c0b750bc46daa7e94f97e4408414512,16032,1954-07-31..2026-12-15 (series con inicios distintos)
+trm_banrep_20261114.xlsx,https://suameca.banrep.gov.co/descarga-multiple-de-datos/ (serie TRM),2026-11-14,d749d1affd14f73bdb8e85eeec07b145060bd77c26e729725db2e95a3c6d2f37,12775,1991-11-27..2026-11-16
+brent_fred_dcoilbrenteu_20261114.csv,https://fred.stlouisfed.org/graph/fredgraph.csv?id=DCOILBRENTEU,2026-11-14,,,
+dolar_amplio_fred_dtwexbgs_20261114.csv,https://fred.stlouisfed.org/graph/fredgraph.csv?id=DTWEXBGS,2026-11-14,,,
+fed_funds_fred_dff_20261114.csv,https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFF,2026-11-14,,,

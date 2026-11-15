@@ -1,0 +1,15 @@
+{
+  "modelo": "caminata_aleatoria",
+  "parametros": {},
+  "paso_reajuste": 21,
+  "segundos": 0.7,
+  "fallos_estimacion": 0,
+  "reajustes": null,
+  "n_origenes": 3493,
+  "primer_origen": "2005-01-04",
+  "ultimo_origen": "2019-09-26",
+  "inicio_desarrollo": "2005-01-03",
+  "corte_prueba_final": "2020-01-01",
+  "ultimo_dato_cargado": "2019-12-31",
+  "hash_trm_csv": "641393c5df0c869b"
+}

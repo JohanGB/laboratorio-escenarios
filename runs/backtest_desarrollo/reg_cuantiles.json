@@ -1,0 +1,29 @@
+{
+  "modelo": "reg_cuantiles",
+  "parametros": {
+    "columnas": [
+      "lsig",
+      "lratio",
+      "z1",
+      "z5",
+      "z21",
+      "z63",
+      "dist252",
+      "banda",
+      "brent30",
+      "fed90"
+    ],
+    "semilla": 20240501
+  },
+  "paso_reajuste": 21,
+  "segundos": 598.9,
+  "fallos_estimacion": 0,
+  "reajustes": 167,
+  "n_origenes": 3493,
+  "primer_origen": "2005-01-04",
+  "ultimo_origen": "2019-09-26",
+  "inicio_desarrollo": "2005-01-03",
+  "corte_prueba_final": "2020-01-01",
+  "ultimo_dato_cargado": "2019-12-31",
+  "hash_trm_csv": "641393c5df0c869b"
+}
