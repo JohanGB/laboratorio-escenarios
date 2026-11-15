@@ -5,7 +5,9 @@ import pandas as pd
 import pytest
 
 from laboratorio.backtest.datos import Vista, construir_vista
-from laboratorio.backtest.particion import NIVELES
+from laboratorio.backtest.catalogo import FABRICAS as CATALOGO, FABRICAS_LARGOS
+from laboratorio.backtest.particion import HORIZONTES_LARGOS as L, NIVELES
+from laboratorio.modelos.bootstrap import BootstrapEstacionario
 from laboratorio.modelos.cuantiles import LightGBMCuantiles, RegresionCuantiles
 from laboratorio.modelos.garch import GarchT
 from laboratorio.modelos.lineas_base import (EWMA, CaminataAleatoria,
@@ -22,7 +24,22 @@ FABRICAS = {
     "egarch": lambda: GarchT("EGARCH", sims=300),
     "reg_cuantiles": lambda: RegresionCuantiles(),
     "lightgbm": lambda: LightGBMCuantiles(),
+    "bootstrap": lambda: BootstrapEstacionario(sims=300),
+    "bootstrap_filtrado": lambda: BootstrapEstacionario(filtrado=True, sims=300),
+    # corrida larga (h = 126, 252)
+    "caminata_largo": lambda: CaminataAleatoria(horizontes=L),
+    "sim_hist_largo": lambda: SimulacionHistorica(ventana=300, horizontes=L),
+    "ewma_largo": lambda: EWMA(0.94, horizontes=L),
+    "garch_largo": lambda: GarchT("GARCH", sims=300, horizontes=L),
+    "bootstrap_largo": lambda: BootstrapEstacionario(sims=300, horizontes=L),
+    "bootstrap_filtrado_largo": lambda: BootstrapEstacionario(filtrado=True, sims=300, horizontes=L),
 }
+
+
+def test_canario_cubre_el_catalogo():
+    """Toda clase de modelo de los catálogos (corto y largo) tiene un caso en el canario."""
+    clases = {type(f()) for f, _ in list(CATALOGO.values()) + list(FABRICAS_LARGOS.values())}
+    assert clases <= {type(f()) for f in FABRICAS.values()}
 
 
 def vista(n=900, seed=3):
@@ -70,3 +87,29 @@ def test_cuantiles_ordenados_y_deterministas(nombre):
         assert qa[h].shape == (2, len(NIVELES)) and np.isfinite(qa[h]).all()
         assert (np.diff(qa[h], axis=1) >= -1e-12).all()
         assert np.array_equal(qa[h], qb[h])
+
+
+def test_lightgbm_sin_fuga_con_series_externas_que_empiezan_tarde():
+    """N5: `dolar_amplio` empieza tarde (como en 2006) y `politica` tiene hueco inicial (como en
+    1998). Los orígenes 600-700 cruzan la aparición de `dolar30` (≈ obs. 677): el pronóstico no
+    puede depender del futuro ni de cuándo aparecerá la serie."""
+    from laboratorio.modelos import caracteristicas as car
+    v = vista()
+    ext = v.externas.copy()
+    ext.iloc[:650, ext.columns.get_loc("dolar_amplio")] = np.nan
+    ext.iloc[:200, ext.columns.get_loc("politica")] = np.nan
+    ext["dolar_amplio"] = ext["dolar_amplio"] * np.exp(np.random.default_rng(4).normal(0, 0.01, v.n).cumsum())
+    v = Vista(v.fechas, v.logp, v.r, v.banda, v.estres, ext)
+    d = car.construir(v)
+    assert d["dolar30"].iloc[:600].isna().all() and d["dolar30"].iloc[700:].notna().all()
+    origenes = np.array([600, 650, 680, 700])
+    m = LightGBMCuantiles(); m.ajustar(v.hasta(600))
+    base = m.pronosticar(v.hasta(700), origenes, NIVELES)
+    for i, o in enumerate(origenes):
+        solo = m.pronosticar(v.hasta(int(o)), np.array([o]), NIVELES)
+        sucio = m.pronosticar(corromper_futuro(v, int(o)).hasta(700), np.array([o]), NIVELES)
+        for h in m.horizontes:
+            assert solo[h][0] == pytest.approx(base[h][i], rel=1e-9, abs=1e-12)
+            assert sucio[h][0] == pytest.approx(base[h][i], rel=1e-9, abs=1e-12)
+    m2 = LightGBMCuantiles(); m2.ajustar(v.hasta(700))          # entrenamiento con NaN y valores
+    assert all(np.isfinite(q).all() for q in m2.pronosticar(v.hasta(700), origenes, NIVELES).values())

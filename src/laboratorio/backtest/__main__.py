@@ -1,8 +1,10 @@
 """Backtest de desarrollo (nunca toca la prueba final).
 
-  PYTHONPATH=src python -m laboratorio.backtest correr [modelo ...] [--forzar]
+  PYTHONPATH=src python -m laboratorio.backtest correr [modelo ...] [--forzar] [--largo]
   PYTHONPATH=src python -m laboratorio.backtest reporte
 Resultados por modelo en runs/backtest_desarrollo/<modelo>.csv.gz + <modelo>.json (caché).
+Con --largo: horizontes 126 y 252 (FABRICAS_LARGOS) en runs/backtest_largo/, corrida aparte
+con su propio embargo (no altera los orígenes de la corrida corta).
 """
 from __future__ import annotations
 
@@ -12,27 +14,29 @@ import json
 import time
 from pathlib import Path
 
-from .catalogo import FABRICAS
+from .catalogo import FABRICAS, FABRICAS_LARGOS
 from .corredor import correr
 from .datos import cargar_desarrollo
 from .particion import INICIO_DESARROLLO, INICIO_PRUEBA_FINAL
 
 SALIDA = Path("runs") / "backtest_desarrollo"
+SALIDA_LARGO = Path("runs") / "backtest_largo"
 
 
 def hash_archivo(p: Path) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest()[:16]
 
 
-def correr_modelos(raiz: Path, nombres: list[str], forzar: bool = False) -> None:
+def correr_modelos(raiz: Path, nombres: list[str], forzar: bool = False, largo: bool = False) -> None:
     vista = cargar_desarrollo(raiz)
-    out = raiz / SALIDA
+    catalogo = FABRICAS_LARGOS if largo else FABRICAS
+    out = raiz / (SALIDA_LARGO if largo else SALIDA)
     out.mkdir(parents=True, exist_ok=True)
     for nombre in nombres:
         csv, meta = out / f"{nombre}.csv.gz", out / f"{nombre}.json"
         if csv.exists() and meta.exists() and not forzar:
             print(f"{nombre}: en caché"); continue
-        fabrica, paso = FABRICAS[nombre]
+        fabrica, paso = catalogo[nombre]
         m = fabrica()
         t0 = time.time()
         df = correr(m, vista, paso=paso)
@@ -41,6 +45,7 @@ def correr_modelos(raiz: Path, nombres: list[str], forzar: bool = False) -> None
         info = {"modelo": nombre, "parametros": m.parametros(), "paso_reajuste": paso,
                 "segundos": round(seg, 1), "fallos_estimacion": getattr(m, "fallos", 0),
                 "reajustes": getattr(m, "reajustes", None), "n_origenes": int(df["origen"].nunique()),
+                "horizontes": list(m.horizontes),
                 "primer_origen": str(df["fecha"].min())[:10], "ultimo_origen": str(df["fecha"].max())[:10],
                 "inicio_desarrollo": INICIO_DESARROLLO, "corte_prueba_final": INICIO_PRUEBA_FINAL,
                 "ultimo_dato_cargado": str(vista.fechas.max())[:10],
@@ -53,11 +58,13 @@ def main(argv=None) -> None:
     ap = argparse.ArgumentParser(prog="laboratorio.backtest")
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("correr"); c.add_argument("modelos", nargs="*"); c.add_argument("--forzar", action="store_true")
+    c.add_argument("--largo", action="store_true")
     sub.add_parser("reporte")
     a = ap.parse_args(argv)
     raiz = Path(".")
     if a.cmd == "correr":
-        correr_modelos(raiz, a.modelos or list(FABRICAS), a.forzar)
+        cat = FABRICAS_LARGOS if a.largo else FABRICAS
+        correr_modelos(raiz, a.modelos or list(cat), a.forzar, a.largo)
     else:
         from ..reportes.fase2 import generar
         print(generar(raiz))
