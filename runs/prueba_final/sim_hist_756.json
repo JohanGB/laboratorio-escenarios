@@ -1,0 +1,30 @@
+{
+  "modelo": "sim_hist_756",
+  "parametros": {
+    "ventana": 756,
+    "lam": null
+  },
+  "paso_reajuste": 21,
+  "segundos": 1.4,
+  "fallos_estimacion": 0,
+  "reajustes": null,
+  "n_origenes": 1564,
+  "horizontes": [
+    1,
+    5,
+    21,
+    63
+  ],
+  "es": "aplica",
+  "primer_origen": "2020-01-03",
+  "ultimo_origen": "2026-08-12",
+  "inicio_desarrollo": "2005-01-03",
+  "corte_prueba_final": "2020-01-01",
+  "ultimo_dato_cargado": "2026-11-14",
+  "hash_trm_csv": "641393c5df0c869b",
+  "prueba_final": true,
+  "hash_codigo": "3eb375386a72beb1365ab12bbc9060697464c83fa2a22c292189ff6920806336",
+  "hash_entorno": "fd4c1314e5cc3e57",
+  "hash_externas_diario_csv": "c3cd56acdfdc01da",
+  "hash_tasas_diarias_csv": "5557495a88e94063"
+}

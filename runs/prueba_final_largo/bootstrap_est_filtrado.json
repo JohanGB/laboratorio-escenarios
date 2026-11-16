@@ -1,0 +1,32 @@
+{
+  "modelo": "bootstrap_est_filtrado",
+  "parametros": {
+    "filtrado": true,
+    "sims": 4000,
+    "semilla": 20240501,
+    "bloque": "politis_white(max serie, |serie|)",
+    "lam_ewma": 0.94,
+    "ventana": "expansiva (toda la historia)"
+  },
+  "paso_reajuste": 21,
+  "segundos": 40.2,
+  "fallos_estimacion": 0,
+  "reajustes": 66,
+  "n_origenes": 1375,
+  "horizontes": [
+    126,
+    252
+  ],
+  "es": "no aplica: no se calcula en la corrida larga",
+  "primer_origen": "2020-01-03",
+  "ultimo_origen": "2025-10-17",
+  "inicio_desarrollo": "2005-01-03",
+  "corte_prueba_final": "2020-01-01",
+  "ultimo_dato_cargado": "2026-11-14",
+  "hash_trm_csv": "641393c5df0c869b",
+  "prueba_final": true,
+  "hash_codigo": "3eb375386a72beb1365ab12bbc9060697464c83fa2a22c292189ff6920806336",
+  "hash_entorno": "fd4c1314e5cc3e57",
+  "hash_externas_diario_csv": "c3cd56acdfdc01da",
+  "hash_tasas_diarias_csv": "5557495a88e94063"
+}
