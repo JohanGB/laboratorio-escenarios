@@ -12,6 +12,8 @@ Candados (R3):
 - Git: `docs/prerregistro.md` debe ser idéntico al del commit etiquetado `prerregistro-final`,
   `src/` y `data/` deben ser idénticos a ese commit y no tener nada sin versionar. Así el
   prerregistro que se verifica es el que quedó fechado en la historia, no uno editado después.
+  Una adenda (corregir un error de programa) es una etiqueta NUEVA `prerregistro-adenda-1`,
+  `-2`…, en un commit posterior; vale la última y la original no se mueve ni se borra.
 - Al empezar se escribe `runs/prueba_final/INICIADA.json` (hora, hashes, commits) ANTES de leer
   los datos. Una corrida interrumpida se puede reanudar: cada reanudación queda anotada ahí y un
   resultado en caché solo vale si se produjo con los mismos hashes; si no, ese modelo se repite.
@@ -67,6 +69,7 @@ REPORTE_FINAL = Path("reports") / "prueba_final.md"
 FIGURA_PIT = "prueba_final_pit.png"
 PRERREGISTRO = Path("docs") / "prerregistro.md"
 ETIQUETA = "prerregistro-final"                    # etiqueta de git del commit del prerregistro
+PREFIJO_ADENDA = "prerregistro-adenda-"            # adendas: etiquetas nuevas -1, -2…; la original no se mueve
 RUTAS_LIMPIAS = ("src", "data")                    # deben ser idénticas a ese commit y sin extras
 ARCHIVOS_DATOS = ("trm.csv", "externas_diario.csv", "tasas_diarias.csv")
 PAQUETES = ("numpy", "pandas", "scipy", "statsmodels", "arch", "lightgbm")
@@ -133,33 +136,75 @@ def _git(raiz: Path, *args: str) -> subprocess.CompletedProcess:
         raise RuntimeError("no se pudo ejecutar git: sin git no se abre la prueba final") from e
 
 
-def verificar_git(raiz: str | Path = ".") -> str:
-    """Exige que el prerregistro, `src/` y `data/` sean los del commit etiquetado. Devuelve su SHA.
+def _commit_de(raiz: Path, etiqueta: str) -> str | None:
+    r = _git(raiz, "rev-parse", "--verify", "--quiet", f"refs/tags/{etiqueta}^{{commit}}")
+    return r.stdout.strip() if r.returncode == 0 and r.stdout.strip() else None
 
-    1. `raiz` es la raíz de un repositorio git y existe la etiqueta `prerregistro-final`.
-    2. Ese commit contiene docs/prerregistro.md y el archivo actual es idéntico (git diff --quiet).
-    3. `src/` y `data/` son idénticos a ese commit y no tienen archivos sin versionar
-       (los ignorados, como data/processed/, los cubren los hashes, no git).
+
+def etiqueta_vigente(raiz: str | Path = ".") -> dict[str, str]:
+    """Etiqueta que fecha el prerregistro vigente: la original o la última adenda.
+
+    - `prerregistro-final` es la original: debe existir siempre; no se mueve ni se borra.
+    - Una adenda (corrección de un error de programa) es una etiqueta NUEVA,
+      `prerregistro-adenda-1`, `-2`…, numeradas sin saltos, cada una en un commit posterior al
+      de la etiqueta anterior. Vale la de número más alto.
+    Devuelve {"etiqueta", "commit_prerregistro", "commit_etiqueta_original"}.
     """
     raiz = Path(raiz)
     r = _git(raiz, "rev-parse", "--show-prefix")
     if r.returncode != 0 or r.stdout.strip():
         raise RuntimeError(f"{raiz.resolve()} no es la raíz de un repositorio git: sin historia "
                            "que feche el prerregistro no se abre la prueba final")
-    r = _git(raiz, "rev-parse", "--verify", "--quiet", f"refs/tags/{ETIQUETA}^{{commit}}")
-    if r.returncode != 0 or not r.stdout.strip():
+    original = _commit_de(raiz, ETIQUETA)
+    if original is None:
         raise RuntimeError(f"no existe la etiqueta de git «{ETIQUETA}»: el prerregistro debe estar "
-                           "en un commit etiquetado antes de abrir la prueba final")
-    commit = r.stdout.strip()
+                           "en un commit etiquetado antes de abrir la prueba final (y esa "
+                           "etiqueta no se borra aunque haya adendas)")
+    numeros = []
+    for nombre in _git(raiz, "tag", "-l", PREFIJO_ADENDA + "*").stdout.split():
+        m = re.fullmatch(re.escape(PREFIJO_ADENDA) + r"([1-9][0-9]*)", nombre)
+        if m is None:
+            raise RuntimeError(f"etiqueta de adenda con nombre inválido: «{nombre}» (se espera "
+                               f"{PREFIJO_ADENDA}1, {PREFIJO_ADENDA}2…)")
+        numeros.append(int(m.group(1)))
+    numeros.sort()
+    if numeros != list(range(1, len(numeros) + 1)):
+        raise RuntimeError(f"las adendas no son consecutivas desde 1 (hay {numeros}): falta alguna "
+                           "etiqueta; las adendas no se borran")
+    cadena = [(ETIQUETA, original)] + [(f"{PREFIJO_ADENDA}{k}", _commit_de(raiz, f"{PREFIJO_ADENDA}{k}"))
+                                       for k in numeros]
+    for (antes, c_antes), (despues, c_despues) in zip(cadena, cadena[1:]):
+        if (c_despues is None or c_despues == c_antes
+                or _git(raiz, "merge-base", "--is-ancestor", c_antes, c_despues).returncode != 0):
+            raise RuntimeError(f"«{despues}» no está en un commit posterior al de «{antes}»: una "
+                               "adenda es un commit nuevo sobre el prerregistro anterior")
+    etiqueta, commit = cadena[-1]
+    return {"etiqueta": etiqueta, "commit_prerregistro": commit, "commit_etiqueta_original": original}
+
+
+def verificar_git(raiz: str | Path = ".") -> dict[str, str]:
+    """Exige que el prerregistro, `src/` y `data/` sean los del commit de la etiqueta vigente.
+
+    1. `raiz` es la raíz de un repositorio git y existe la etiqueta `prerregistro-final`
+       (más, si las hay, las adendas: ver `etiqueta_vigente`).
+    2. El commit vigente contiene docs/prerregistro.md y el archivo actual es idéntico
+       (git diff --quiet).
+    3. `src/` y `data/` son idénticos a ese commit y no tienen archivos sin versionar
+       (los ignorados, como data/processed/, los cubren los hashes, no git).
+    Devuelve lo mismo que `etiqueta_vigente`.
+    """
+    raiz = Path(raiz)
+    vigente = etiqueta_vigente(raiz)
+    etiqueta, commit = vigente["etiqueta"], vigente["commit_prerregistro"]
     pre = PRERREGISTRO.as_posix()
     if _git(raiz, "cat-file", "-e", f"{commit}:{pre}").returncode != 0:
-        raise RuntimeError(f"el commit etiquetado «{ETIQUETA}» no contiene {pre}")
+        raise RuntimeError(f"el commit etiquetado «{etiqueta}» no contiene {pre}")
     malos = []
     if _git(raiz, "diff", "--quiet", commit, "--", pre).returncode != 0:
-        malos.append(f"{pre} no coincide con el del commit etiquetado «{ETIQUETA}»")
+        malos.append(f"{pre} no coincide con el del commit etiquetado «{etiqueta}»")
     if _git(raiz, "diff", "--quiet", commit, "--", *RUTAS_LIMPIAS).returncode != 0:
-        malos.append(f"{' y '.join(r + '/' for r in RUTAS_LIMPIAS)} no coinciden con el commit "
-                     f"etiquetado «{ETIQUETA}»")
+        malos.append(f"{' y '.join(ruta + '/' for ruta in RUTAS_LIMPIAS)} no coinciden con el commit "
+                     f"etiquetado «{etiqueta}»")
     s = _git(raiz, "status", "--porcelain", "--untracked-files=all", "--", *RUTAS_LIMPIAS)
     if s.returncode != 0:
         malos.append("git status falló: " + s.stderr.strip())
@@ -169,7 +214,7 @@ def verificar_git(raiz: str | Path = ".") -> str:
     if malos:
         raise RuntimeError("git no coincide con el prerregistro; NO se corre nada:\n  "
                            + "\n  ".join(malos))
-    return commit
+    return vigente
 
 
 def verificar_prerregistro(raiz: str | Path = ".", dir_src: str | Path | None = None) -> dict[str, str]:
@@ -215,8 +260,10 @@ def _ahora() -> str:
 def registrar_inicio(raiz: Path, hashes: dict[str, str], commits: dict[str, str]) -> dict:
     """Escribe (o amplía) runs/prueba_final/INICIADA.json: la prueba final quedó abierta.
 
-    La primera vez guarda hora, hashes, entorno y commits. Si ya existe (reanudación de una
-    corrida interrumpida) no se pisa: se agrega una entrada a «reanudaciones». Ilegible = error.
+    La primera vez guarda hora, hashes, entorno, etiqueta vigente y commits. Si ya existe
+    (reanudación de una corrida interrumpida) no se pisa: se agrega una entrada a
+    «reanudaciones». Ilegible = error. Si la etiqueta original ya no apunta al commit que quedó
+    anotado al abrir la prueba, alguien la movió: no se corre nada.
     """
     archivo = raiz / SALIDA_FINAL / "INICIADA.json"
     entrada = {**commits, **hashes, "entorno": entorno()}
@@ -227,6 +274,10 @@ def registrar_inicio(raiz: Path, hashes: dict[str, str], commits: dict[str, str]
             raise RuntimeError(f"{archivo} está dañado; no se corre nada hasta aclararlo") from e
         if not isinstance(reg, dict) or "iniciada" not in reg:
             raise RuntimeError(f"{archivo} no tiene el formato esperado; no se corre nada")
+        if reg.get("commit_etiqueta_original") != commits.get("commit_etiqueta_original"):
+            raise RuntimeError(f"la etiqueta «{ETIQUETA}» se movió desde que se abrió la prueba "
+                               f"(estaba en {reg.get('commit_etiqueta_original')}): la original no "
+                               f"se mueve; una adenda es una etiqueta nueva {PREFIJO_ADENDA}N")
         reg.setdefault("reanudaciones", []).append({"hora": _ahora(), **entrada})
     else:
         archivo.parent.mkdir(parents=True, exist_ok=True)
@@ -262,8 +313,7 @@ def correr_final(raiz: str | Path = ".", dir_src: str | Path | None = None,
         raise RuntimeError(f"la prueba final ya se corrió ({hecho}); no se repite. Cualquier "
                            "cálculo nuevo es «análisis posterior (no confirmatorio)».")
     hashes = verificar_prerregistro(raiz, dir_src)          # hashes y git; todavía sin leer datos
-    commits = {"commit_prerregistro": verificar_git(raiz),
-               "commit_head": _git(raiz, "rev-parse", "HEAD").stdout.strip()}
+    commits = {**verificar_git(raiz), "commit_head": _git(raiz, "rev-parse", "HEAD").stdout.strip()}
     inicio = registrar_inicio(raiz, hashes, commits)
     vista, primero = cargar_prueba_final(raiz, dir_src)
     cat = {m: FABRICAS[m] for m in MODELOS_FINAL} if catalogo is None else catalogo
@@ -302,7 +352,8 @@ def main_final(raiz: Path, solo_verificar: bool = False, solo_hashes: bool = Fal
     for k, v in hashes.items():
         print(f"  {k}: {v}")
     print("  entorno: " + ", ".join(f"{k} {v}" for k, v in entorno().items()))
-    print(f"  commit etiquetado «{ETIQUETA}»: {verificar_git(raiz)}")
+    vigente = verificar_git(raiz)
+    print(f"  commit etiquetado «{vigente['etiqueta']}»: {vigente['commit_prerregistro']}")
     if solo_verificar:
         return
     print(correr_final(raiz))

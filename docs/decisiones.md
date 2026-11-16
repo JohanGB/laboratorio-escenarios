@@ -166,7 +166,11 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
 - **Git como testigo del prerregistro.** `verificar_prerregistro` exige la etiqueta
   `prerregistro-final`, que `docs/prerregistro.md`, `src/` y `data/` sean iguales a ese commit y
   que `src/` y `data/` no tengan archivos sin versionar. Descartado: solo hashes (el prerregistro
-  se podía editar junto con sus hashes sin dejar fecha). Una adenda exige mover la etiqueta.
+  se podía editar junto con sus hashes sin dejar fecha).
+- **Adenda = etiqueta nueva** `prerregistro-adenda-1`, `-2`… en un commit posterior; vale la
+  última y `prerregistro-final` no se mueve ni se borra (decisión del autor al responder la
+  pregunta 8). Descartado: mover la etiqueta original. El código exige numeración sin saltos y
+  orden en la historia; con la prueba abierta, INICIADA.json detecta si la original se movió.
 - **El caché de la prueba final solo vale con los mismos hashes** (código, entorno y datos) en el
   .json; si no, el modelo se repite. Descartado: fiarse de que existan los archivos.
 - **INICIADA.json antes de leer datos** (hora, hashes, commits; las reanudaciones se agregan) y

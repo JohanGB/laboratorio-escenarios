@@ -235,19 +235,57 @@ def test_git_distinto_del_commit_etiquetado_detiene_todo(tmp_path, que):
     assert not (raiz / "runs").exists()
 
 
-def test_el_prerregistro_editado_sigue_fallando_aunque_se_haga_commit_hasta_mover_la_etiqueta(tmp_path):
+def _commit_adenda(raiz: Path, texto: str) -> str:
+    p = raiz / final.PRERREGISTRO
+    p.write_text(p.read_text(encoding="utf-8") + f"\n{texto}\n", encoding="utf-8")
+    _git(raiz, "add", "-A"); _git(raiz, "commit", "-q", "-m", texto)
+    return _git(raiz, "rev-parse", "HEAD")
+
+
+def test_una_adenda_es_una_etiqueta_nueva_y_la_original_no_se_mueve_ni_se_borra(tmp_path):
     raiz = _raiz_sintetica(tmp_path)
     src = raiz / SRC
-    etiquetado = final.verificar_git(raiz)
-    assert etiquetado == _git(raiz, "rev-parse", "HEAD")
-    p = raiz / final.PRERREGISTRO
-    p.write_text(p.read_text(encoding="utf-8") + "\nAdenda.\n", encoding="utf-8")
-    _git(raiz, "add", "-A"); _git(raiz, "commit", "-q", "-m", "adenda")
+    original = _git(raiz, "rev-parse", "HEAD")
+    assert final.verificar_git(raiz) == {"etiqueta": "prerregistro-final", "commit_prerregistro": original,
+                                         "commit_etiqueta_original": original}
+    # Adenda 1: editar y hacer commit no basta; hace falta la etiqueta nueva. La original sigue donde estaba.
+    c1 = _commit_adenda(raiz, "Adenda 1.")
     with pytest.raises(RuntimeError, match="docs/prerregistro.md no coincide"):
         final.verificar_prerregistro(raiz, src)
-    nuevo = _sellar(raiz)                                    # mover la etiqueta es un acto deliberado
-    assert final.verificar_git(raiz) == nuevo != etiquetado
+    _git(raiz, "tag", "prerregistro-adenda-1")
+    assert final.verificar_git(raiz) == {"etiqueta": "prerregistro-adenda-1", "commit_prerregistro": c1,
+                                         "commit_etiqueta_original": original}
     final.verificar_prerregistro(raiz, src)
+    assert _git(raiz, "rev-parse", final.ETIQUETA) == original != c1
+    # Adenda 2: vale siempre la de número más alto.
+    c2 = _commit_adenda(raiz, "Adenda 2.")
+    with pytest.raises(RuntimeError, match="docs/prerregistro.md no coincide"):
+        final.verificar_prerregistro(raiz, src)
+    _git(raiz, "tag", "prerregistro-adenda-2")
+    assert final.etiqueta_vigente(raiz) == {"etiqueta": "prerregistro-adenda-2", "commit_prerregistro": c2,
+                                            "commit_etiqueta_original": original}
+    final.verificar_prerregistro(raiz, src)
+    # Lo que no vale: saltarse un número, un nombre raro, una adenda sin commit nuevo o hacia atrás.
+    for etiqueta, donde, motivo in (("prerregistro-adenda-4", "HEAD", "no son consecutivas"),
+                                    ("prerregistro-adenda-x", "HEAD", "nombre inválido"),
+                                    ("prerregistro-adenda-03", "HEAD", "nombre inválido"),
+                                    ("prerregistro-adenda-3", c2, "no está en un commit posterior"),
+                                    ("prerregistro-adenda-3", original, "no está en un commit posterior")):
+        _git(raiz, "tag", etiqueta, donde)
+        with pytest.raises(RuntimeError, match=motivo):
+            final.verificar_prerregistro(raiz, src)
+        _git(raiz, "tag", "-d", etiqueta)
+    final.verificar_prerregistro(raiz, src)
+    # Borrar una adenda intermedia o la original también detiene todo.
+    _git(raiz, "tag", "-d", "prerregistro-adenda-1")
+    with pytest.raises(RuntimeError, match="no son consecutivas"):
+        final.verificar_prerregistro(raiz, src)
+    _git(raiz, "tag", "prerregistro-adenda-1", c1)
+    final.verificar_prerregistro(raiz, src)
+    _git(raiz, "tag", "-d", final.ETIQUETA)
+    with pytest.raises(RuntimeError, match="no existe la etiqueta"):
+        final.verificar_prerregistro(raiz, src)
+    assert not (raiz / "runs").exists()
 
 
 def test_cargar_prueba_final_entrega_toda_la_historia_y_el_primer_origen(tmp_path):
@@ -329,6 +367,8 @@ def test_iniciada_y_hecho_dejan_rastro_con_el_sha256_de_cada_resultado(corrida):
         assert ini[k] == hecho[k] == v
     assert ini["entorno"] == final.entorno()
     assert ini["commit_prerregistro"] == hecho["commit_prerregistro"] == _git(raiz, "rev-parse", final.ETIQUETA)
+    assert ini["etiqueta"] == hecho["etiqueta"] == "prerregistro-final"
+    assert ini["commit_etiqueta_original"] == hecho["commit_etiqueta_original"] == ini["commit_prerregistro"]
     assert ini["commit_head"] == _git(raiz, "rev-parse", "HEAD")
     assert ini["reanudaciones"] == [] and hecho["reanudaciones"] == 0
     assert hecho["iniciada"] == ini["iniciada"]
@@ -401,12 +441,23 @@ def test_una_corrida_interrumpida_deja_rastro_y_al_reanudar_no_reusa_resultados_
         final.correr_final(raiz, src, cat, {}, CONF)
     assert capsys.readouterr().out.splitlines() == [f"{nombre}: en caché"]
 
-    # Adenda: se corrige el programa (otro hash), prerregistro con el hash nuevo y etiqueta movida.
+    # Adenda: se corrige el programa (otro hash) y el prerregistro lleva el hash nuevo.
+    original = _git(raiz, "rev-parse", final.ETIQUETA)
     (src / "b.py").write_bytes(b"y = 3\n")
     _escribir_prerregistro(raiz, final.hashes_actuales(raiz, src))
-    commit = _sellar(raiz)
+    _git(raiz, "add", "-A"); _git(raiz, "commit", "-q", "-m", "adenda 1")
+    commit = _git(raiz, "rev-parse", "HEAD")
     h1 = final.hash_codigo(src)
     assert h1 != h0
+    # Mover la etiqueta original no sirve: INICIADA.json recuerda dónde estaba al abrir la prueba.
+    _git(raiz, "tag", "-f", final.ETIQUETA)
+    with pytest.raises(RuntimeError, match="se movió desde que se abrió la prueba"):
+        final.correr_final(raiz, src, {nombre: CAT[nombre]}, {}, CONF)
+    assert len(json.loads((d / "INICIADA.json").read_text(encoding="utf-8"))["reanudaciones"]) == 1
+    assert not (d / "HECHO.json").exists() and capsys.readouterr().out == ""
+    # Lo correcto: la original vuelve a su commit y la adenda es una etiqueta nueva.
+    _git(raiz, "tag", "-f", final.ETIQUETA, original)
+    _git(raiz, "tag", "prerregistro-adenda-1")
 
     def generar_falso(raiz, confirmatorias=None):
         salida = Path(raiz) / final.REPORTE_FINAL
@@ -423,8 +474,13 @@ def test_una_corrida_interrumpida_deja_rastro_y_al_reanudar_no_reusa_resultados_
     assert fin["iniciada"] == ini["iniciada"] and fin["hash_codigo"] == h0     # el inicio no se pisa
     assert [r["hash_codigo"] for r in fin["reanudaciones"]] == [h0, h1]
     assert fin["reanudaciones"][-1]["commit_prerregistro"] == commit != fin["commit_prerregistro"]
+    assert fin["etiqueta"] == "prerregistro-final" and fin["commit_prerregistro"] == original
+    assert [r["etiqueta"] for r in fin["reanudaciones"]] == ["prerregistro-final", "prerregistro-adenda-1"]
+    assert {fin["commit_etiqueta_original"], *(r["commit_etiqueta_original"] for r in fin["reanudaciones"])} == {original}
     hecho = json.loads((d / "HECHO.json").read_text(encoding="utf-8"))
     assert hecho["reanudaciones"] == 2 and hecho["hash_codigo"] == h1
+    assert hecho["etiqueta"] == "prerregistro-adenda-1" and hecho["commit_prerregistro"] == commit
+    assert hecho["commit_etiqueta_original"] == original
     # INICIADA.json dañado: no se corre nada.
     (d / "HECHO.json").unlink()
     (d / "INICIADA.json").write_text("{", encoding="utf-8")

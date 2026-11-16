@@ -150,7 +150,8 @@ Después de la corrida no se ajusta nada; todo cálculo posterior se titula «an
 |---|---|
 | Correr dos veces y quedarse con la mejor | mientras exista `runs/prueba_final/HECHO.json` el comando no repite y no tiene opción de forzar (borrarlo: ver abajo) |
 | Cambiar el código tras ver algo | hash de `src/**/*.py` (igual con fin de línea de Windows o de Unix); si cambia un byte, el comando no carga los datos |
-| Editar este prerregistro después de fecharlo | `docs/prerregistro.md` debe ser idéntico al del commit con la etiqueta `prerregistro-final` |
+| Editar este prerregistro después de fecharlo | `docs/prerregistro.md` debe ser idéntico al del commit con la etiqueta `prerregistro-final` (o, si hubo adenda, al de la última `prerregistro-adenda-N`) |
+| Mover o borrar la etiqueta para tapar un cambio | la original debe existir siempre; las adendas se numeran sin saltos y cada una va en un commit posterior; una vez abierta la prueba, `INICIADA.json` recuerda dónde estaba la original y el comando no corre si se movió |
 | Código o datos distintos de los fechados | `src/` y `data/` deben ser idénticos a ese commit y no tener archivos sin versionar |
 | Cambiar o actualizar los datos | hashes de los tres archivos |
 | Otra versión de una biblioteca que mueva los números | hash del entorno (Python, numpy, pandas, scipy, statsmodels, arch, lightgbm); no se actualiza nada (sección 2) |
@@ -181,10 +182,15 @@ Puertas que **no** se pueden cerrar y se declaran:
 - **No correr el caso entre la etiqueta y la prueba.** El motor del caso agrega líneas a
   `data/supuestos/registro.jsonl`; eso ensucia `data/` y el comando se negaría a correr.
 - Si la corrida se cae por un error de programa, habrá que corregirlo y eso cambia el hash. En ese
-  caso: no se abre ningún resultado parcial, la corrección se documenta como adenda a este
-  prerregistro con el hash nuevo, se hace un commit nuevo y la etiqueta `prerregistro-final` se
-  mueve a ese commit (el anterior queda en la historia y en `INICIADA.json`), y la corrida se
-  reanuda. Los modelos que ya habían terminado con el código anterior se corren de nuevo.
+  caso: no se abre ningún resultado parcial; la corrección se documenta como adenda al final de
+  este prerregistro con el hash nuevo; se hace un commit nuevo y a ese commit se le pone una
+  **etiqueta nueva**, `prerregistro-adenda-1` (la siguiente sería `-2`, y así). **La etiqueta
+  `prerregistro-final` no se mueve ni se borra**: el prerregistro original sigue fechado donde
+  estaba. Luego la corrida se reanuda; los modelos que ya habían terminado con el código anterior
+  se corren de nuevo y `INICIADA.json` anota la reanudación con su etiqueta y sus hashes.
+- **Mover la etiqueta original antes de abrir la prueba.** Entre el cierre de este prerregistro y
+  la primera corrida, el código no puede saber si alguien movió `prerregistro-final` (después sí:
+  lo recuerda `INICIADA.json`). Compromiso: no se mueve; la historia de git la contradiría.
 - Poca potencia: ≈ 1700 días a h = 1, pero solo ≈ 27 ventanas independientes a h = 63. Un «no
   confirmado» a 21 o 63 días no prueba que el modelo sea inútil; solo que no hay evidencia.
 
@@ -196,7 +202,7 @@ Provisionales, recalculados el 16-nov-2026 tras los últimos cambios de código 
 calcular al cerrar con `python -m laboratorio.backtest final --hashes`; si nadie toca `src/` ni
 los datos, salen iguales):
 
-- `hash_codigo`: `7794d6505f3cb2dff9832dc0e9dd6d3bef85bee70b29906b1a6999eb89a99a80`
+- `hash_codigo`: `a3c3ea0da8b84ba0da40297dd3e060ee85fcf52eee1cb43db5ed3a02243301c4`
 - `hash_entorno`: `fd4c1314e5cc3e57`
 - `hash_trm_csv`: `641393c5df0c869b`
 - `hash_externas_diario_csv`: `c3cd56acdfdc01da`
@@ -218,6 +224,13 @@ Comandos de la prueba (y ningún otro):
 ```
 PYTHONPATH=src python -m laboratorio.backtest final --verificar
 PYTHONPATH=src python -m laboratorio.backtest final
+```
+
+Solo si hay una adenda (sección 9), con el texto de la adenda y los hashes nuevos ya escritos:
+
+```
+git commit -am "prerregistro prueba final: adenda 1"
+git tag prerregistro-adenda-1
 ```
 
 `--verificar` compara los cinco hashes y el estado de git sin leer ningún dato. El segundo comando
