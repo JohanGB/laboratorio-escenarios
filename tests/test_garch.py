@@ -133,3 +133,92 @@ def test_calibracion_con_su_propio_proceso_generador(tipo):
         f = res[(res.h == h) & (res.grupo == "todo")].iloc[0]
         assert abs(f.cob95 - 0.95) < 0.03 and abs(f.cob90 - 0.90) < 0.04, (tipo, h, f.cob95, f.cob90)
     assert m.fallos == 0
+
+
+# ---- O1: t asimétrica y arranque en caliente --------------------------------------------------
+from laboratorio.modelos.garch import innovaciones, persistencia, skewt_estandarizada  # noqa: E402
+
+
+def simular_gjr_skewt(n, w=0.02, a=0.04, b=0.90, g=0.08, nu=6, lam=-0.3, seed=0):
+    z = skewt_estandarizada(np.random.default_rng(seed), nu, lam, n)
+    v = w / (1 - a - g / 2 - b); out = np.empty(n)
+    for k in range(n):
+        out[k] = np.sqrt(v) * z[k]
+        v = w + (a + g * (out[k] < 0)) * out[k] ** 2 + b * v
+    return out / 100.0
+
+
+def test_skewt_estandarizada_media_cero_varianza_uno_y_asimetria():
+    z = skewt_estandarizada(np.random.default_rng(0), 6, -0.3, 400_000)
+    assert z.var() == pytest.approx(1.0, rel=0.03) and abs(z.mean()) < 0.01
+    assert stats.skew(z) < -0.3                     # λ < 0: cola izquierda más larga
+    assert innovaciones(np.random.default_rng(1), {"nu": 6.0}, 10).shape == (10,)
+
+
+@pytest.mark.parametrize("tipo", ["GJR", "EGARCH"])
+def test_recursion_propia_coincide_con_arch_en_skewt(tipo):
+    v = vista_de(simular_gjr_skewt(3000, seed=2))
+    m = GarchT(tipo, dist="skewt"); m.ajustar(v.hasta(2000))
+    assert set(m.params) >= {"nu", "lam"}
+    eps = v.r[1:2001] * 100
+    am = m._modelo(eps)
+    inv = {"omega": "omega", "alpha": "alpha[1]", "beta": "beta[1]", "gamma": "gamma[1]",
+           "nu": "eta", "lam": "lambda"}
+    por_nombre = {inv[k]: x for k, x in m.params.items()}
+    orden = am.volatility.parameter_names() + am.distribution.parameter_names()
+    fijo = am.fix(pd.Series({k: por_nombre[k] for k in orden}))
+    mio = varianzas(eps, tipo, m.params)
+    assert np.sqrt(mio[:-1])[500:] == pytest.approx(fijo.conditional_volatility[500:], rel=1e-6)
+
+
+def test_skewt_recupera_la_asimetria_y_la_traslada_a_los_cuantiles():
+    v = vista_de(simular_gjr_skewt(6000, lam=-0.35, seed=4))
+    m = GarchT("GJR", dist="skewt", sims=20000); m.ajustar(v)
+    assert -0.5 < m.params["lam"] < -0.2 and m.nombre == "gjr_skewt"
+    q = m.pronosticar(v, np.array([v.n - 1]), NIVELES)[1][0]
+    niv = list(np.round(NIVELES, 6))
+    assert -q[niv.index(0.01)] > q[niv.index(0.99)]     # cola izquierda (1 %) más larga
+
+
+def test_arranque_en_caliente_usa_los_parametros_previos_y_rescata_en_frio(datos, monkeypatch):
+    m = GarchT("GJR"); m.ajustar(datos.hasta(1500)); previos = dict(m.params)
+    llamadas = []
+    original = GarchT._intento
+
+    def espia(self, am, inicio):
+        llamadas.append(None if inicio is None else inicio.copy())
+        if inicio is not None:
+            return None, "no_convergio"          # el caliente falla → debe reintentar en frío
+        return original(self, am, inicio)
+    monkeypatch.setattr(GarchT, "_intento", espia)
+    m.ajustar(datos.hasta(1800))
+    orden = ["omega", "alpha", "gamma", "beta", "nu"]
+    assert np.allclose(llamadas[0], [previos[k] for k in orden]) and llamadas[1] is None
+    assert m.rescates == 1 and m.fallos == 0 and m.params != previos
+
+
+def test_arranque_en_caliente_y_en_frio_llegan_al_mismo_optimo(datos):
+    c, f = GarchT("GJR"), GarchT("GJR", arranque="frio")
+    for t in (1500, 1800):
+        c.ajustar(datos.hasta(t)); f.ajustar(datos.hasta(t))
+    for k in c.params:
+        assert c.params[k] == pytest.approx(f.params[k], rel=2e-2, abs=2e-3)
+    assert c.historial[-1]["persistencia"] == pytest.approx(persistencia("GJR", c.params))
+
+
+def test_tolerancia_de_persistencia_acepta_la_holgura_del_optimizador():
+    """α+β = 1,00001 (holgura de SLSQP en la frontera IGARCH) se acepta; 1,001 es explosivo."""
+    def serie(a, b):
+        return pd.Series({"omega": 0.002, "alpha[1]": a, "beta[1]": b, "nu": 6.0})
+    nuevo, viejo = GarchT("GARCH"), GarchT("GARCH", tol_persistencia=1e-6)
+    assert nuevo._validar(serie(0.22748, 0.77253))[0] is not None
+    assert viejo._validar(serie(0.22748, 0.77253)) == (None, "explosivo")
+    assert nuevo._validar(serie(0.2, 0.801)) == (None, "explosivo")
+    assert nuevo.parametros()["tol_persistencia"] == 1e-4
+
+
+def test_fallo_registra_la_causa(datos, monkeypatch):
+    m = GarchT("GARCH"); m.ajustar(datos.hasta(1500))
+    monkeypatch.setattr(GarchT, "_intento", lambda self, am, inicio: (None, "explosivo"))
+    m.ajustar(datos.hasta(1800))
+    assert m.causas == {"explosivo": 1} and m.historial[-1]["fallo"]

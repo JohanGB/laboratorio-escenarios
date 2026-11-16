@@ -9,7 +9,9 @@ from laboratorio.backtest.catalogo import FABRICAS as CATALOGO, FABRICAS_LARGOS
 from laboratorio.backtest.particion import HORIZONTES_LARGOS as L, NIVELES
 from laboratorio.modelos.bootstrap import BootstrapEstacionario
 from laboratorio.modelos.cuantiles import LightGBMCuantiles, RegresionCuantiles
+from laboratorio.modelos.fhs import FHS
 from laboratorio.modelos.garch import GarchT
+from laboratorio.modelos.markov import MarkovVarianza
 from laboratorio.modelos.lineas_base import (EWMA, CaminataAleatoria,
                                              SimulacionHistorica)
 
@@ -26,6 +28,12 @@ FABRICAS = {
     "lightgbm": lambda: LightGBMCuantiles(),
     "bootstrap": lambda: BootstrapEstacionario(sims=300),
     "bootstrap_filtrado": lambda: BootstrapEstacionario(filtrado=True, sims=300),
+    "gjr_skewt": lambda: GarchT("GJR", dist="skewt", sims=300),
+    "egarch_skewt": lambda: GarchT("EGARCH", dist="skewt", sims=300),
+    "fhs_ewma": lambda: FHS("ewma", sims=300),
+    "fhs_gjr": lambda: FHS("gjr", sims=300),
+    "markov_2": lambda: MarkovVarianza(2, sims=300),
+    "markov_3": lambda: MarkovVarianza(3, sims=300),
     # corrida larga (h = 126, 252)
     "caminata_largo": lambda: CaminataAleatoria(horizontes=L),
     "sim_hist_largo": lambda: SimulacionHistorica(ventana=300, horizontes=L),
@@ -33,6 +41,10 @@ FABRICAS = {
     "garch_largo": lambda: GarchT("GARCH", sims=300, horizontes=L),
     "bootstrap_largo": lambda: BootstrapEstacionario(sims=300, horizontes=L),
     "bootstrap_filtrado_largo": lambda: BootstrapEstacionario(filtrado=True, sims=300, horizontes=L),
+    "gjr_skewt_largo": lambda: GarchT("GJR", dist="skewt", sims=300, horizontes=L),
+    "fhs_ewma_largo": lambda: FHS("ewma", sims=300, horizontes=L),
+    "fhs_gjr_largo": lambda: FHS("gjr", sims=300, horizontes=L),
+    "markov_2_largo": lambda: MarkovVarianza(2, sims=300, horizontes=L),
 }
 
 
