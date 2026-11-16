@@ -1,11 +1,10 @@
-# Prerregistro de la prueba final — BORRADOR
+# Prerregistro de la prueba final
 
-**Estado: BORRADOR, sin confirmar por el autor (16-nov-2026).** Mientras este archivo se llame
-`prerregistro_borrador.md`, el comando de la prueba final se niega a correr. Al confirmarlo se
-renombra a `docs/prerregistro.md`, se recalculan los hashes de la sección 10, se hace el commit
-`prerregistro prueba final` y a ese commit se le pone la etiqueta de git `prerregistro-final`
-(sin la etiqueta el comando tampoco corre). Después de ese commit no se cambia ni una coma del
-código, de los datos ni de este texto.
+**Estado: CERRADO. Confirmado por el autor el 16-nov-2026** (respuestas en la sección 11). Queda
+fechado por el commit `prerregistro prueba final` y su etiqueta de git `prerregistro-final`; sin
+esa etiqueta el comando de la prueba final no corre. Desde ese commit no se cambia ni una coma
+del código, de los datos ni de este texto. La única excepción es la adenda por error de programa
+descrita en la sección 9, que se agrega al final con su propia etiqueta y no toca lo ya escrito.
 
 Los rangos describen incertidumbre estadística; nada aquí es una recomendación financiera.
 
@@ -198,9 +197,7 @@ Puertas que **no** se pueden cerrar y se declaran:
 
 Semilla de todos los modelos y del MCS: 20240501.
 
-Provisionales, recalculados el 16-nov-2026 tras los últimos cambios de código (se vuelven a
-calcular al cerrar con `python -m laboratorio.backtest final --hashes`; si nadie toca `src/` ni
-los datos, salen iguales):
+Definitivos, calculados al cerrar (16-nov-2026) con `python -m laboratorio.backtest final --hashes`:
 
 - `hash_codigo`: `a3c3ea0da8b84ba0da40297dd3e060ee85fcf52eee1cb43db5ed3a02243301c4`
 - `hash_entorno`: `fd4c1314e5cc3e57`
@@ -210,11 +207,11 @@ los datos, salen iguales):
 
 Entorno: python 3.11.9, numpy 2.4.1, pandas 3.0.0, scipy 1.17.0, statsmodels 0.15.0, arch 9.0.0, lightgbm 4.7.0.
 
-Cierre del prerregistro (una vez, cuando el autor responda la sección 11):
+Cómo se cerró este prerregistro (hecho una vez, el 16-nov-2026, tras las respuestas de la sección 11):
 
 ```
 git mv docs/prerregistro_borrador.md docs/prerregistro.md
-PYTHONPATH=src python -m laboratorio.backtest final --hashes     (y pegar aquí si algo cambió)
+PYTHONPATH=src python -m laboratorio.backtest final --hashes
 git commit -am "prerregistro prueba final"
 git tag prerregistro-final
 ```
@@ -237,7 +234,22 @@ git tag prerregistro-adenda-1
 escribe `runs/prueba_final/INICIADA.json` antes de leer los datos, no imprime ninguna cifra
 mientras corre y al terminar deja `reports/prueba_final.md` y `runs/prueba_final/HECHO.json`.
 
-## 11. Preguntas para el autor (sí o no)
+## 11. Preguntas al autor y sus respuestas
+
+**Respondidas por el autor el 16-nov-2026:**
+
+| pregunta | respuesta |
+|---|---|
+| 1. Datos ya vistos | sí |
+| 2. Una sola vez | sí |
+| 3. Cuatro pruebas, una por horizonte | sí |
+| 4. Éxito pequeño | sí |
+| 5. Motor del caso | sí |
+| 6. Seis meses y un año, solo descriptivos | sí |
+| 7. Datos congelados (y tampoco Python ni bibliotecas, sección 2) | sí |
+| 8. Si el programa falla | sí, con una condición: «la adenda crea una etiqueta nueva (prerregistro-adenda-1, -2…) y la original no se mueve ni se borra» |
+
+La condición de la pregunta 8 ya está en la sección 9 y en el código. Las preguntas, tal como se hicieron:
 
 1. **Datos ya vistos.** ¿Aceptas que el reporte diga «datos no usados para elegir modelos, pero ya
    vistos en gráficos»? Ejemplo: ya vimos en las figuras cómo se movió el dólar en 2020; lo que
@@ -262,4 +274,5 @@ mientras corre y al terminar deja `reports/prueba_final.md` y `runs/prueba_final
 7. **Datos congelados.** ¿Aceptas no actualizar la TRM hasta después de la prueba? Ejemplo: aunque
    mañana se publique la TRM de 4.050 pesos, no entra; si entrara, el comando se negaría a correr.
 8. **Si el programa falla.** ¿Aceptas que, si la corrida se cae por un error de programa, se corrija
-   sin mirar resultados parciales y se anote como adenda con el hash nuevo?
+   sin mirar resultados parciales y se anote como adenda con el hash nuevo? (Al preguntarla se
+   precisó: con un commit nuevo y su etiqueta.)

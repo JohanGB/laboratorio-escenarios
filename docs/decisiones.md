@@ -185,3 +185,9 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
 - **Lectores sin candado** (grep de `src/`): la ruta de la prueba final solo lee los tres CSV del
   candado; `reportes/fase0.py` y `motor/datos.py` leen `trm.csv` completo y el motor agrega líneas
   a `data/supuestos/registro.jsonl` (correr el caso tras etiquetar bloquea la prueba). Declarado.
+
+## 16-nov-2026 · F4 (cierre del prerregistro)
+- **Prerregistro cerrado**: el autor respondió sí a las 8 preguntas (la 8 con la condición de las
+  adendas como etiquetas nuevas). `docs/prerregistro_borrador.md` pasó a `docs/prerregistro.md`,
+  commit `prerregistro prueba final`, etiqueta `prerregistro-final`. Desde aquí `src/`, `data/` y
+  el prerregistro no se tocan hasta después de la corrida. La prueba final NO se ha corrido.

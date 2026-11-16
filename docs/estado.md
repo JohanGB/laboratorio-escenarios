@@ -1,5 +1,5 @@
 # Estado
-Fases 0-2, F1, O1-O3, F2, F3 completas; F4 con código endurecido y prerregistro en BORRADOR (16-nov-2026). Decisiones en docs/decisiones.md.
+Fases 0-2, F1, O1-O3, F2, F3 completas; F4 con PRERREGISTRO CERRADO (16-nov-2026): docs/prerregistro.md, commit `prerregistro prueba final`, etiqueta `prerregistro-final`. Decisiones en docs/decisiones.md.
 - Git: rama main; `* -text` salvo `*.py` y `docs/prerregistro*.md` (`eol=lf`). data/raw versionado; data/processed, runs/**/*.csv.gz y .playwright-mcp ignorados. A1 pasos 2-9 pendientes.
 - Datos: data/raw (inmutable) -> data/processed. EDA en reports/fase0.md. Motor (src/laboratorio/motor/): caso compra_dolares (supuestos ILUSTRATIVOS).
 - Backtest: origen móvil desde 2005-01-03, ventana expansiva, reajuste 21, embargo = h_max. PRUEBA FINAL desde 2020-01-01: intocable hasta C2.
@@ -11,4 +11,4 @@ Fases 0-2, F1, O1-O3, F2, F3 completas; F4 con código endurecido y prerregistro
 - F3: solo `lightgbm_cuantiles` sobrevive, y solo a h = 1 (−3,7 % de CRPS, colas cortas). A 5-63 nada se distingue de las líneas base. N4: LightGBM a 21 = sobreajuste; a 63 = sobreajuste + estandarización (reports/f3_lightgbm.md).
 - Motor del caso: `bootstrap_est_filtrado` en todos los horizontes (simple = sensibilidad). Fichas en models/model_cards/ (lightgbm_cuantiles, bootstrap_est_filtrado).
 - F4: `backtest/final.py`: candado de hashes (código sin CRLF, datos, entorno) + git (etiqueta `prerregistro-final`, `src/` y `data/` iguales al commit y limpios); caché solo con los mismos hashes; INICIADA.json al abrir, HECHO.json con SHA-256 de cada resultado; sin cifras en pantalla. `reportes/prueba_final.py`: advertencia fija a 63/126/252, sensibilidad h = 1 sin covid ni 2022. Solo sintético; 2020+ sin abrir.
-- Respuestas del autor (16-nov): 5, 6 y 7 sí; 8 sí con adendas como etiquetas nuevas `prerregistro-adenda-N` (la original no se mueve; ya en el código). 1-4: marcó sí pero pidió aclarar algo antes; SIN CERRAR. Luego (§10): `git mv` a docs/prerregistro.md, `final --hashes`, commit `prerregistro prueba final`, etiqueta `prerregistro-final`. No tocar src/ ni data/ ni correr el caso después. Sigue O4, F5, F6.
+- Autor respondió sí a las 8 preguntas (16-nov; la 8 con adendas como etiquetas nuevas `prerregistro-adenda-N`, la original no se mueve). SIGUE: correr la prueba final cuando el autor lo ordene (`final --verificar`, luego `final`, UNA vez). Hasta entonces NO tocar src/ ni data/, NO correr el caso ni la tubería de datos, NO actualizar Python ni bibliotecas. Después: O4, F5, F6.
