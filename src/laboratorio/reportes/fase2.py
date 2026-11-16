@@ -98,6 +98,28 @@ def _otros_pasos(meta: dict[str, dict]) -> str:
     return "".join(f" ({' y '.join(ms)} cada {p})" for p, ms in sorted(otros.items()))
 
 
+MARCA_HASH = "hash_trm_csv:"
+
+
+def conclusiones(archivo: Path, hashes: set) -> list[str]:
+    """Texto de conclusiones escrito a mano (F3), solo si corresponde a los datos de la corrida.
+
+    El archivo declara en su primera línea `<!-- hash_trm_csv: XXXX -->`. Si no coincide con el
+    hash de las corridas, las conclusiones NO se incluyen: se avisa que están obsoletas.
+    """
+    L = ["## Conclusiones", ""]
+    if not archivo.exists():
+        return L + ["Sin conclusiones escritas para estas corridas.", ""]
+    lineas = archivo.read_text(encoding="utf-8").splitlines()
+    declarado = (lineas[0].split(MARCA_HASH)[1].split("-->")[0].strip()
+                 if lineas and MARCA_HASH in lineas[0] else None)
+    if hashes != {declarado}:
+        return L + [f"**Conclusiones obsoletas**: se escribieron para los datos con hash {declarado} y "
+                    f"las corridas usan {', '.join(sorted(map(str, hashes))) or 'ninguno'}. "
+                    "Hay que revisarlas antes de citarlas.", ""]
+    return L + [f"Escritas para las corridas con hash de datos {declarado}.", "", *lineas[1:], ""]
+
+
 def _f(x, d=3):
     return "—" if x is None or (isinstance(x, float) and np.isnan(x)) else f"{x:.{d}f}"
 
@@ -108,9 +130,9 @@ def _p(x):
 
 def generar(raiz: str | Path = ".", directorio: str | Path | None = None,
             salida: str | Path | None = None, directorio_largo: str | Path | None = None,
-            reps_mcs: int | None = None) -> Path:
+            reps_mcs: int | None = None, conclusiones_md: str | Path | None = None) -> Path:
     from ..evaluacion.mcs import REPS_MCS
-    from .pruebas_f2 import secciones
+    from .pruebas_f2 import seccion_veredicto, secciones, veredicto
     raiz = Path(raiz)
     directorio = Path(directorio) if directorio else raiz / "runs" / "backtest_desarrollo"
     salida = Path(salida) if salida else raiz / "reports" / "fase2.md"
@@ -143,7 +165,9 @@ def generar(raiz: str | Path = ".", directorio: str | Path | None = None,
          "si no supera en ningún horizonte.",
          "- Los orígenes se traslapan para h>1: las coberturas a h=21 y 63 tienen pocas observaciones "
          "independientes (≈ n/h) y su error estándar es grande.", "",
-         "## Resumen por modelo", ""]
+         "## Resumen por modelo", "",
+         "Estado según el criterio por pares fijado antes de correr. El veredicto que cuenta para "
+         "concluir (MCS por horizonte, con Holm como verificación) y las conclusiones están al final.", ""]
     filas = []
     for m in res:
         md = meta.get(m, {})
@@ -194,20 +218,24 @@ def generar(raiz: str | Path = ".", directorio: str | Path | None = None,
             filas.append([m, cola, _f(tasa, 4), _p(puc), _p(pind), _p(pcc)])
     L += [tabla(pd.DataFrame(filas, columns=["modelo", "cola", "tasa", "p_uc", "p_ind", "p_cc"])), ""]
 
+    tablas_mcs: dict = {}
     L += secciones(res, meta, directorio / "cola", res_largo, salida.parent / "figs",
-                   reps_mcs=reps_mcs or REPS_MCS)
+                   reps_mcs=reps_mcs or REPS_MCS, salida_mcs=tablas_mcs)
 
     L += ["## Detalle Diebold-Mariano (candidato vs. mejor línea base)", "",
           tabla(pd.DataFrame([[r.modelo, r.h, r.linea_base, _f(r.relativo, 3), _f(r.dm_t, 2), _p(r.dm_p),
                                r.rezagos, r.n, r.estado] for r in cmp_.itertuples()],
                              columns=["modelo", "h", "línea base", "CRPS/base", "t (HLN)", "p", "rezagos",
-                                      "n", "estado"])), "",
-          "## Reproducir", "", "```", "PYTHONPATH=src python -m laboratorio.backtest correr",
+                                      "n", "estado"])), ""]
+    hashes = {md.get("hash_trm_csv") for md in meta.values() if md}
+    L += seccion_veredicto(veredicto(tablas_mcs, cmp_, LINEAS_BASE))
+    L += conclusiones(Path(conclusiones_md) if conclusiones_md else salida.with_name("fase2_conclusiones.md"),
+                      hashes)
+    L += ["## Reproducir", "", "```", "PYTHONPATH=src python -m laboratorio.backtest correr",
           "PYTHONPATH=src python -m laboratorio.backtest correr --largo",
           "PYTHONPATH=src python -m laboratorio.backtest reporte", "```", ""]
-    hashes = {md.get("hash_trm_csv") for md in meta.values() if md}
     if hashes:
         L += [f"Hash (SHA-256, 16 hex) de data/processed/trm.csv usado: {', '.join(sorted(map(str, hashes)))}.", ""]
     salida.parent.mkdir(parents=True, exist_ok=True)
-    salida.write_text("\n".join(L), encoding="utf-8")
+    salida.write_bytes("\n".join(L).encode("utf-8"))
     return salida

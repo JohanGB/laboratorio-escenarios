@@ -7,6 +7,7 @@ Independiente del dominio: recibe secuencias de aciertos/violaciones o de pérdi
 - Diebold-Mariano (1995) con varianza de largo plazo Newey-West (Bartlett) y la corrección de
   muestra pequeña de Harvey, Leybourne y Newbold (1997), distribución t con n−1 g.l.
 Las pruebas de violaciones suponen observaciones no traslapadas (usar h = 1).
+- Holm (1979): p-valores ajustados por comparaciones múltiples (control del error por familia).
 """
 from __future__ import annotations
 
@@ -102,3 +103,20 @@ def diebold_mariano(perdida_a, perdida_b, h: int = 1, rezagos: int | None = None
         raise ValueError("alternativa debe ser 'menor' o 'dos_colas'")
     return Resultado(float(t), p, {"dm_sin_corregir": float(dm), "media_d": float(d.mean()),
                                    "rezagos": L, "n": n, "var_lp": var})
+
+
+def holm(p_valores) -> np.ndarray:
+    """p-valores ajustados de Holm, en el orden de entrada.
+
+    Ordenados p_(1) ≤ … ≤ p_(m): ajustado_(i) = máx_{j ≤ i} mín(1, (m − j + 1)·p_(j)).
+    Rechazar con ajustado < α controla la probabilidad de al menos un falso positivo en α.
+    """
+    p = np.asarray(p_valores, float)
+    if p.ndim != 1 or len(p) == 0 or np.any(~np.isfinite(p)) or np.any((p < 0) | (p > 1)):
+        raise ValueError("se requieren p-valores finitos en [0, 1]")
+    m = len(p)
+    orden = np.argsort(p, kind="stable")
+    aj = np.maximum.accumulate(np.minimum(1.0, (m - np.arange(m)) * p[orden]))
+    out = np.empty(m)
+    out[orden] = aj
+    return out

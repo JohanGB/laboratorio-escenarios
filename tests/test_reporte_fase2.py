@@ -50,7 +50,8 @@ def test_reporte_marca_descartado_al_candidato_que_no_supera_la_base(tmp_path):
     texto = out.read_text(encoding="utf-8")
     # F2: secciones nuevas
     for titulo in ("## Model Confidence Set", "## Semáforo de Basilea", "## Expected Shortfall",
-                   "## Uniformidad del PIT", "## Acierto direccional", "## Horizontes largos"):
+                   "## Uniformidad del PIT", "## Acierto direccional", "## Horizontes largos",
+                   "## Veredicto por horizonte (MCS y Holm)", "## Conclusiones"):
         assert titulo in texto, titulo
     mcs = texto.split("## Model Confidence Set")[1].split("## Semáforo")[0]
     assert "| ancho |" in mcs and "| no |" in mcs               # el candidato malo sale del MCS

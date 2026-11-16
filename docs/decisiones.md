@@ -117,3 +117,24 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
   en la corta; markov_3 6,3 min en la larga). Corta y larga en paralelo (2 procesos, 4 núcleos):
   34 y 40 min. RAM: ≤ 190 MB por proceso, mínimo libre 0,58 GB de 8 (runs/o3_ram.log).
 - El protocolo del reporte arma los pasos de reajuste desde los metadatos de cada corrida.
+
+## 16-nov-2026 · F3 (conclusiones)
+- **Regla del veredicto (N2).** Principal: MCS por horizonte; un horizonte tiene modelo útil solo
+  si ninguna línea base queda en su MCS. Verificación: Diebold-Mariano contra la mejor línea base
+  con Holm entre los horizontes de cada modelo (< 0,05). Descartado: usar el criterio por pares
+  del resumen para concluir (premia al ganador de muchas pruebas). El criterio de descarte
+  original no se tocó: el resumen lo sigue mostrando. Resultado: solo `lightgbm_cuantiles` a
+  h = 1; `reg_cuantiles` (p_mcs = 0,063) es casi-acierto y no se rescata.
+- **N4, LightGBM a 21 y 63.** Diagnóstico con el mismo esquema sin variables (aísla la
+  estandarización) y la pérdida dentro/fuera de muestra: a 21 es sobreajuste; a 63, sobreajuste
+  más estandarización (reports/f3_lightgbm.md). No se retoca el modelo: sería buscar en desarrollo.
+- **Conclusiones en archivo aparte** (`reports/fase2_conclusiones.md`, con el hash de datos en la
+  primera línea). El reporte las incluye solo si ese hash coincide con el de las corridas; si
+  no, avisa que están obsoletas. Descartado: escribirlas dentro del código del reporte (quedarían
+  pegadas a cifras viejas sin aviso).
+- **Motor del caso: `bootstrap_est_filtrado` en todos sus horizontes**; el bootstrap simple queda
+  como sensibilidad (a h = 1 se rechazan su VaR y su ES). Motivo: da trayectorias, está en el MCS
+  a 5-63 y es el de cobertura más cercana a la nominal; no porque gane en CRPS. Pendiente de
+  que el autor lo confirme en las preguntas del prerregistro (F4).
+- **Fichas**: `lightgbm_cuantiles` (único que sobrevive) y `bootstrap_est_filtrado`. La segunda
+  no sobrevive: se escribe porque es el motor del caso y sus límites deben quedar a la vista.

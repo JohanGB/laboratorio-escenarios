@@ -22,11 +22,13 @@ from ..evaluacion.direccion import acierto_binomial, pesaran_timmermann  # noqa:
 from ..evaluacion.mcs import ALFA_MCS, REPS_MCS, conjunto_confianza  # noqa: E402
 from ..evaluacion.perdidas import crps_cuantiles  # noqa: E402
 from ..evaluacion.pit import uniformidad  # noqa: E402
+from ..evaluacion.pruebas import holm  # noqa: E402
 from ..evaluacion.riesgo import (Z2_CRITICO_5, acerbi_szekely_z2, semaforo_basilea,  # noqa: E402
                                  violaciones)
 
 COLS = [f"q_{t:g}" for t in NIVELES]
 VENTANA_BASILEA = 250
+ALFA_HOLM = 0.05
 INTERVALOS_LARGOS = (("q_0.05", "q_0.95", 0.90), ("q_0.025", "q_0.975", 0.95))
 
 
@@ -59,20 +61,21 @@ def perdidas_crps(res: dict[str, pd.DataFrame], h: int) -> pd.DataFrame:
     return pd.DataFrame(series).dropna().sort_index()
 
 
-def seccion_mcs(res, reps: int) -> tuple[list[str], dict[int, str]]:
+def seccion_mcs(res, reps: int) -> tuple[list[str], dict[int, str], dict[int, pd.DataFrame]]:
     L = [f"## Model Confidence Set (α = {ALFA_MCS:.2f})".replace(".", ","), "",
          "Conjunto de modelos que, con 90 % de confianza, contiene al de menor CRPS esperado "
          "(Hansen, Lunde y Nason). Compara TODOS los modelos a la vez, líneas base incluidas, así "
          "que no premia al ganador de muchas pruebas por pares. Bootstrap estacionario, "
          f"{reps} réplicas, bloque máx(2h, 10), estadístico de rango, semilla fija. "
          "p_mcs ≥ 0,10 ⇒ el modelo queda en el conjunto.", ""]
-    mejor = {}
+    mejor, tablas = {}, {}
     for h in HORIZONTES:
         P = perdidas_crps(res, h)
         if P.shape[1] < 2 or len(P) == 0:
             continue
         r = conjunto_confianza(P, h=h, reps=reps)
         mejor[h] = r.modelo.iloc[0]
+        tablas[h] = r
         dentro = [m for m, e in zip(r.modelo, r.en_mcs) if e]
         L += [f"### h = {h}", "",
               _tabla([[m, _f(100 * c, 4), _p(p), "**sí**" if e else "no"]
@@ -80,7 +83,7 @@ def seccion_mcs(res, reps: int) -> tuple[list[str], dict[int, str]]:
                      ["modelo", "CRPS", "p_mcs", "en el MCS"]), "",
               f"Conjunto superior en h={h} ({len(dentro)} de {len(r)}, n = {len(P)}, bloque "
               f"{r.attrs['bloque']}): " + ", ".join(f"`{m}`" for m in dentro) + ".", ""]
-    return L, mejor
+    return L, mejor, tablas
 
 
 def seccion_basilea(res) -> list[str]:
@@ -216,9 +219,65 @@ def seccion_largos(res_largo: dict[str, pd.DataFrame]) -> list[str]:
                                "IC 95 % (n ef.)", "compatible", "CRPS (descr.)"]), ""]
 
 
+def veredicto(tablas_mcs: dict[int, pd.DataFrame], cmp_: pd.DataFrame, bases) -> pd.DataFrame:
+    """Veredicto por (candidato, h) con la regla de F3 (N2).
+
+    Criterio principal: el MCS del horizonte. Un horizonte «tiene modelo útil» solo si NINGUNA
+    línea base queda en su MCS (si queda alguna, nada se distingue de ella). Verificación: el
+    p-valor de Diebold-Mariano del candidato contra la mejor línea base, ajustado por Holm entre
+    los horizontes de ese modelo, debe ser < 0,05. Sobrevive = en el MCS, sin líneas base en el
+    MCS, CRPS menor que la base y Holm < 0,05. Los casi-aciertos no se rescatan.
+    `cmp_` = salida de `reportes.fase2.comparar` (modelo, h, dm_p, relativo).
+    """
+    filas = []
+    for m, g in cmp_.groupby("modelo", sort=True):
+        g = g.sort_values("h")
+        aj = holm(g["dm_p"].to_numpy())
+        for (_, r), p_h in zip(g.iterrows(), aj):
+            t = tablas_mcs.get(int(r["h"]))
+            if t is None or m not in set(t.modelo):
+                continue
+            fila = t[t.modelo == m].iloc[0]
+            base_en_mcs = bool(t[t.modelo.isin(bases)].en_mcs.any())
+            filas.append({"modelo": m, "h": int(r["h"]), "en_mcs": bool(fila.en_mcs),
+                          "p_mcs": float(fila.p_mcs), "base_en_mcs": base_en_mcs,
+                          "relativo": float(r["relativo"]), "dm_p": float(r["dm_p"]),
+                          "dm_p_holm": float(p_h),
+                          "sobrevive": bool(fila.en_mcs and not base_en_mcs and p_h < ALFA_HOLM
+                                            and r["relativo"] < 1)})
+    return pd.DataFrame(filas)
+
+
+def seccion_veredicto(v: pd.DataFrame) -> list[str]:
+    L = ["## Veredicto por horizonte (MCS y Holm)", "",
+         "Regla (N2): el criterio principal es el MCS de cada horizonte. Un horizonte tiene un "
+         "modelo útil solo si **ninguna línea base** queda en su MCS; si queda alguna, ningún "
+         "candidato se distingue de ella. Verificación: Diebold-Mariano contra la mejor línea "
+         "base con p ajustado por Holm entre los horizontes de cada modelo (< 0,05). Un modelo "
+         "**sobrevive** en h si cumple las tres cosas. Los casi-aciertos no se rescatan. Esta regla "
+         "reemplaza, para concluir, al criterio por pares del resumen (que se conserva sin cambios).", ""]
+    if len(v) == 0:
+        return L + ["Sin datos suficientes.", ""]
+    filas = []
+    for h, g in v.groupby("h"):
+        sob = list(g[g.sobrevive].modelo)
+        filas.append([h, int(g.en_mcs.sum()), "sí" if g.base_en_mcs.iloc[0] else "**no**",
+                      ", ".join(f"`{m}`" for m in sob) if sob else "ninguno"])
+    L += [_tabla(filas, ["h", "candidatos en el MCS", "¿línea base en el MCS?", "sobreviven"]), ""]
+    det = v[v.en_mcs | (v.dm_p_holm < ALFA_HOLM)].sort_values(["h", "relativo"])
+    L += ["Detalle (candidatos que están en el MCS o que pasan Holm):", "",
+          _tabla([[r.modelo, r.h, _f(r.relativo, 3), _p(r.p_mcs), "sí" if r.en_mcs else "no",
+                   _p(r.dm_p), _p(r.dm_p_holm), "**sí**" if r.sobrevive else "no"]
+                  for r in det.itertuples()],
+                 ["modelo", "h", "CRPS/base", "p_mcs", "en el MCS", "DM p", "DM p (Holm)", "sobrevive"]), ""]
+    return L
+
+
 def secciones(res, meta, dir_cola: Path, res_largo: dict | None, dir_figs: Path,
-              rel_figs: str = "figs", reps_mcs: int = REPS_MCS) -> list[str]:
-    mcs, mejor = seccion_mcs(res, reps_mcs)
+              rel_figs: str = "figs", reps_mcs: int = REPS_MCS, salida_mcs: dict | None = None) -> list[str]:
+    mcs, mejor, tablas = seccion_mcs(res, reps_mcs)
+    if salida_mcs is not None:
+        salida_mcs.update(tablas)
     L = mcs + seccion_basilea(res) + seccion_es(res, meta, dir_cola)
     L += seccion_pit(res, mejor, dir_figs, rel_figs) + seccion_direccion(res)
     if res_largo:

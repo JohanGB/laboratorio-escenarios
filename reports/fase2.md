@@ -12,6 +12,8 @@ Distribuciones de pronóstico del rendimiento logarítmico de la TRM a h observa
 
 ## Resumen por modelo
 
+Estado según el criterio por pares fijado antes de correr. El veredicto que cuenta para concluir (MCS por horizonte, con Holm como verificación) y las conclusiones están al final.
+
 | modelo | tipo | supera en h | estado | segundos | fallos de estimación |
 |---|---|---|---|---|---|
 | bootstrap_est | candidato | ninguno | **DESCARTADO** | 34.5 | 0 |
@@ -670,6 +672,78 @@ Corrida aparte (runs/backtest_largo/). Los orígenes diarios se traslapan casi p
 | markov_2 | 63 | caminata_aleatoria | 0.997 | -1.18 | 0.119 | 70 | 3493 | descartado |
 | markov_3 | 63 | caminata_aleatoria | 0.992 | -1.21 | 0.113 | 70 | 3493 | descartado |
 | reg_cuantiles | 63 | caminata_aleatoria | 1.083 | 1.81 | 0.965 | 70 | 3493 | descartado |
+
+## Veredicto por horizonte (MCS y Holm)
+
+Regla (N2): el criterio principal es el MCS de cada horizonte. Un horizonte tiene un modelo útil solo si **ninguna línea base** queda en su MCS; si queda alguna, ningún candidato se distingue de ella. Verificación: Diebold-Mariano contra la mejor línea base con p ajustado por Holm entre los horizontes de cada modelo (< 0,05). Un modelo **sobrevive** en h si cumple las tres cosas. Los casi-aciertos no se rescatan. Esta regla reemplaza, para concluir, al criterio por pares del resumen (que se conserva sin cambios).
+
+| h | candidatos en el MCS | ¿línea base en el MCS? | sobreviven |
+|---|---|---|---|
+| 1 | 1 | **no** | `lightgbm_cuantiles` |
+| 5 | 7 | sí | ninguno |
+| 21 | 10 | sí | ninguno |
+| 63 | 11 | sí | ninguno |
+
+Detalle (candidatos que están en el MCS o que pasan Holm):
+
+| modelo | h | CRPS/base | p_mcs | en el MCS | DM p | DM p (Holm) | sobrevive |
+|---|---|---|---|---|---|---|---|
+| lightgbm_cuantiles | 1 | 0.963 | 1.000 | sí | <0,001 | <0,001 | **sí** |
+| reg_cuantiles | 1 | 0.968 | 0.063 | no | <0,001 | <0,001 | no |
+| ewma_0.94 | 1 | 0.981 | <0,001 | no | <0,001 | <0,001 | no |
+| egarch_t | 1 | 0.982 | <0,001 | no | <0,001 | <0,001 | no |
+| egarch_skewt | 1 | 0.982 | <0,001 | no | <0,001 | <0,001 | no |
+| fhs_ewma | 1 | 0.982 | <0,001 | no | <0,001 | <0,001 | no |
+| fhs_gjr | 1 | 0.983 | <0,001 | no | <0,001 | <0,001 | no |
+| gjr_t | 1 | 0.983 | <0,001 | no | <0,001 | <0,001 | no |
+| garch_t | 1 | 0.983 | <0,001 | no | <0,001 | <0,001 | no |
+| gjr_skewt | 1 | 0.983 | <0,001 | no | <0,001 | <0,001 | no |
+| bootstrap_est_filtrado | 1 | 0.983 | <0,001 | no | <0,001 | <0,001 | no |
+| markov_3 | 1 | 0.988 | <0,001 | no | <0,001 | <0,001 | no |
+| ewma_0.94 | 5 | 0.988 | 1.000 | sí | 0.053 | 0.158 | no |
+| reg_cuantiles | 5 | 0.993 | 0.466 | sí | 0.189 | 0.566 | no |
+| egarch_t | 5 | 0.996 | 0.133 | sí | 0.301 | 0.425 | no |
+| bootstrap_est_filtrado | 5 | 0.996 | 0.466 | sí | 0.322 | 0.967 | no |
+| egarch_skewt | 5 | 0.996 | 0.127 | sí | 0.315 | 0.425 | no |
+| lightgbm_cuantiles | 5 | 0.998 | 0.466 | sí | 0.379 | 1.000 | no |
+| fhs_ewma | 5 | 1.000 | 0.318 | sí | 0.491 | 1.000 | no |
+| ewma_0.94 | 21 | 0.964 | 1.000 | sí | 0.056 | 0.158 | no |
+| egarch_skewt | 21 | 0.982 | 0.113 | sí | 0.213 | 0.425 | no |
+| egarch_t | 21 | 0.982 | 0.113 | sí | 0.213 | 0.425 | no |
+| markov_3 | 21 | 0.987 | 0.117 | sí | 0.279 | 0.558 | no |
+| bootstrap_est_filtrado | 21 | 0.994 | 0.237 | sí | 0.410 | 0.967 | no |
+| markov_2 | 21 | 0.996 | 0.117 | sí | 0.424 | 1.000 | no |
+| reg_cuantiles | 21 | 0.997 | 0.215 | sí | 0.448 | 0.896 | no |
+| fhs_ewma | 21 | 1.007 | 0.237 | sí | 0.592 | 1.000 | no |
+| bootstrap_est | 21 | 1.012 | 0.117 | sí | 0.694 | 1.000 | no |
+| fhs_gjr | 21 | 1.015 | 0.113 | sí | 0.726 | 1.000 | no |
+| ewma_0.94 | 63 | 0.976 | 1.000 | sí | 0.125 | 0.158 | no |
+| egarch_t | 63 | 0.986 | 0.726 | sí | 0.056 | 0.169 | no |
+| egarch_skewt | 63 | 0.986 | 0.726 | sí | 0.058 | 0.175 | no |
+| markov_3 | 63 | 0.992 | 0.726 | sí | 0.113 | 0.339 | no |
+| markov_2 | 63 | 0.997 | 0.708 | sí | 0.119 | 0.476 | no |
+| bootstrap_est | 63 | 1.016 | 0.726 | sí | 0.707 | 1.000 | no |
+| fhs_gjr | 63 | 1.050 | 0.554 | sí | 0.853 | 1.000 | no |
+| bootstrap_est_filtrado | 63 | 1.052 | 0.676 | sí | 0.816 | 0.967 | no |
+| reg_cuantiles | 63 | 1.083 | 0.338 | sí | 0.965 | 0.965 | no |
+| fhs_ewma | 63 | 1.092 | 0.323 | sí | 0.922 | 1.000 | no |
+| lightgbm_cuantiles | 63 | 1.137 | 0.222 | sí | 0.995 | 1.000 | no |
+
+## Conclusiones
+
+Escritas para las corridas con hash de datos 641393c5df0c869b.
+
+1. **Solo a 1 día hay un modelo útil.** `lightgbm_cuantiles` es el único de 17 que queda en el MCS (n = 3493) y ninguna línea base queda con él; Diebold-Mariano con Holm, p < 0,001.
+2. **La ganancia es pequeña**: CRPS 0,3593 frente a 0,3730 de la mejor línea base (−3,7 %). Y sus colas quedan cortas: el VaR del 1 % se viola 1,9 % de los días hacia abajo y 1,5 % hacia arriba (Kupiec p < 0,01). Sirve como pronóstico central de mañana, no como medida de riesgo extremo.
+3. `reg_cuantiles` quedó fuera del MCS a 1 día por poco (p = 0,063): es un casi-acierto y no se rescata. Los otros diez candidatos que «superan» por pares a 1 día tampoco quedan en el MCS.
+4. **A 5, 21 y 63 días ningún modelo es útil**: en los tres horizontes al menos una línea base queda en el MCS. `ewma_0.94` tiene el menor CRPS (0,988; 0,964; 0,976 de la base), pero no se distingue de ella (Holm p = 0,158).
+5. **LightGBM empeora a 21 y 63 días** (1,052 y 1,137 de la base). A 21 es sobreajuste; a 63, sobreajuste más la estandarización por σ·√h (reports/f3_lightgbm.md). No se usa por encima de 1 día ni se retoca.
+6. **A 126 y 252 días no hay prueba con potencia**: caben 26 y 13 ventanas independientes. Descriptivo: casi todos los modelos cubren de menos (el intervalo del 95 % cubre entre 0,67 y 0,87). El más cercano al nominal es `bootstrap_est_filtrado` (0,904 y 0,880).
+7. **Calibración**: a 1 día la ji-cuadrado del PIT rechaza a todos menos a `sim_hist_pond`. Con 3493 observaciones detecta desvíos pequeños; a horizontes largos no rechaza casi nada porque no tiene potencia. Ninguna de las dos cosas es un aval.
+8. **Motor del caso: bootstrap por bloques filtrado (`bootstrap_est_filtrado`) en todos sus horizontes.** No gana en CRPS (a 63 días, 1,052 de la base). Se elige porque el caso necesita trayectorias, queda en el MCS a 5, 21 y 63, ningún otro modelo deja su intervalo del 95 % tan cerca del nominal en los seis horizontes a la vez (0,951; 0,952; 0,958; 0,946; 0,904; 0,880) y a 1 día no se rechazan ni su VaR del 1 % ni su ES.
+9. El bootstrap simple (`bootstrap_est`) queda solo como análisis de sensibilidad: a 1 día se rechazan su VaR (Kupiec p < 0,001) y su ES (Z2 = −1,61 y −1,28).
+10. **Límites del motor**: a 126 y 252 días también cubre de menos (0,90 y 0,88 con nominal 0,95) y en el estrés de 2014-2015 a 63 días cubre 0,848. Los rangos del caso a un año son probablemente estrechos y cada cifra debe decirlo.
+11. Todo esto es desarrollo (2005-2019) y varios candidatos nacieron de mirar esos datos. La confirmación es la prueba final prerregistrada (docs/prerregistro.md); hasta entonces nada de lo anterior es un resultado fuera de muestra.
 
 ## Reproducir
 
