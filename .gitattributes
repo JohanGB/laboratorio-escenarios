@@ -1,1 +1,7 @@
+# Por defecto git no toca los fines de línea: los hashes de datos, corridas y reportes dependen
+# de los bytes exactos.
 * -text
+# El código y el prerregistro se guardan y se extraen siempre con LF, en cualquier sistema.
+# (El hash del código normaliza además CRLF a LF: backtest/final.py, hash_codigo.)
+*.py text eol=lf
+docs/prerregistro*.md text eol=lf

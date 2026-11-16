@@ -161,3 +161,23 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
   salida de `final --hashes` y commit `prerregistro prueba final`.
 - `backtest/ejecucion.py`: la ejecución de un modelo salió de `__main__` para que desarrollo y
   prueba final usen el mismo código. El reporte final no incluye veredicto ni conclusiones libres.
+
+## 16-nov-2026 · F4 (candados antes de cerrar el prerregistro)
+- **Git como testigo del prerregistro.** `verificar_prerregistro` exige la etiqueta
+  `prerregistro-final`, que `docs/prerregistro.md`, `src/` y `data/` sean iguales a ese commit y
+  que `src/` y `data/` no tengan archivos sin versionar. Descartado: solo hashes (el prerregistro
+  se podía editar junto con sus hashes sin dejar fecha). Una adenda exige mover la etiqueta.
+- **El caché de la prueba final solo vale con los mismos hashes** (código, entorno y datos) en el
+  .json; si no, el modelo se repite. Descartado: fiarse de que existan los archivos.
+- **INICIADA.json antes de leer datos** (hora, hashes, commits; las reanudaciones se agregan) y
+  **HECHO.json con el SHA-256 de cada resultado**. La corrida no imprime cifras (ni segundos ni
+  fallos): solo nombre y estado de cada modelo.
+- **Fin de línea**: `*.py` y `docs/prerregistro*.md` con `eol=lf`; el resto sigue en `-text`
+  (47 archivos versionados en CRLF y `data/raw/` cuyos bytes ya citan otros hashes). `hash_codigo`
+  normaliza CRLF a LF. Descartado: `eol=lf` para todo.
+- **El reporte final agrega** la advertencia de cobertura permanente a 63/126/252 con n efectivo,
+  la línea de sensibilidad de h = 1 sin covid ni 2022 (descriptiva) y la nota de respaldo
+  indirecto al caso (230 días, costo total). Va en el código porque este se congela al etiquetar.
+- **Lectores sin candado** (grep de `src/`): la ruta de la prueba final solo lee los tres CSV del
+  candado; `reportes/fase0.py` y `motor/datos.py` leen `trm.csv` completo y el motor agrega líneas
+  a `data/supuestos/registro.jsonl` (correr el caso tras etiquetar bloquea la prueba). Declarado.

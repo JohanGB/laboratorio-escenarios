@@ -1,6 +1,6 @@
 # Estado
-Fases 0-2, F1, O1-O3, F2, F3 completas; F4 con código listo y prerregistro en BORRADOR (16-nov-2026). Decisiones en docs/decisiones.md.
-- Git: rama main, sin conversión de fin de línea (protege los hashes). data/raw versionado; data/processed, runs/**/*.csv.gz y .playwright-mcp ignorados. A1 pasos 2-9 pendientes.
+Fases 0-2, F1, O1-O3, F2, F3 completas; F4 con código endurecido y prerregistro en BORRADOR (16-nov-2026). Decisiones en docs/decisiones.md.
+- Git: rama main; `* -text` salvo `*.py` y `docs/prerregistro*.md` (`eol=lf`). data/raw versionado; data/processed, runs/**/*.csv.gz y .playwright-mcp ignorados. A1 pasos 2-9 pendientes.
 - Datos: data/raw (inmutable) -> data/processed. EDA en reports/fase0.md. Motor (src/laboratorio/motor/): caso compra_dolares (supuestos ILUSTRATIVOS).
 - Backtest: origen móvil desde 2005-01-03, ventana expansiva, reajuste 21, embargo = h_max. PRUEBA FINAL desde 2020-01-01: intocable hasta C2.
 - Corridas AL DÍA (O3, 15-nov): corta FABRICAS (17 modelos, h 1-63, 3493 orígenes) en runs/backtest_desarrollo/ + cola/; larga FABRICAS_LARGOS (15, h 126/252) en runs/backtest_largo/. Hash trm.csv 641393c5df0c869b. Registros runs/o3_*.log.
@@ -10,5 +10,5 @@ Fases 0-2, F1, O1-O3, F2, F3 completas; F4 con código listo y prerregistro en B
 - reports/fase2.md (`python -m laboratorio.backtest reporte`, ≈ 11 s) termina con veredicto (MCS + Holm) y conclusiones; estas viven en reports/fase2_conclusiones.md y solo se incluyen si su hash de datos coincide.
 - F3: solo `lightgbm_cuantiles` sobrevive, y solo a h = 1 (−3,7 % de CRPS, colas cortas). A 5-63 nada se distingue de las líneas base. N4: LightGBM a 21 = sobreajuste; a 63 = sobreajuste + estandarización (reports/f3_lightgbm.md).
 - Motor del caso: `bootstrap_est_filtrado` en todos los horizontes (simple = sensibilidad). Fichas en models/model_cards/ (lightgbm_cuantiles, bootstrap_est_filtrado).
-- F4: `backtest/final.py` (candado de hashes código+datos+entorno, corrida única con HECHO.json), `reportes/prueba_final.py`, `python -m laboratorio.backtest final [--hashes|--verificar]`. Probado solo con datos sintéticos; 2020+ sin abrir.
-- PENDIENTE DEL AUTOR: responder las 8 preguntas de docs/prerregistro_borrador.md §11. Luego: renombrar a docs/prerregistro.md, pegar `final --hashes`, commit `prerregistro prueba final`. No tocar src/ ni data/ después. Sigue O4, F5, F6.
+- F4: `backtest/final.py`: candado de hashes (código sin CRLF, datos, entorno) + git (etiqueta `prerregistro-final`, `src/` y `data/` iguales al commit y limpios); caché solo con los mismos hashes; INICIADA.json al abrir, HECHO.json con SHA-256 de cada resultado; sin cifras en pantalla. `reportes/prueba_final.py`: advertencia fija a 63/126/252, sensibilidad h = 1 sin covid ni 2022. Solo sintético; 2020+ sin abrir.
+- PENDIENTE DEL AUTOR: responder las 8 preguntas de docs/prerregistro_borrador.md §11. Luego (§10): `git mv` a docs/prerregistro.md, `final --hashes`, commit `prerregistro prueba final`, etiqueta `prerregistro-final`. No tocar src/ ni data/ ni correr el caso después. Sigue O4, F5, F6.
