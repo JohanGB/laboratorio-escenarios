@@ -1,5 +1,5 @@
 # Estado
-Fases 0-2, F1, O1-O3, F2, F3, F4, O4 (prueba final) y F5 (código) completas. Decisiones en docs/decisiones.md. SIGUE: el autor corre el caso con 10.000 trayectorias y versiona el reporte; después F6.
+Fases 0-2, F1, O1-O3, F2, F3, F4, O4 (prueba final) y F5 completas. Decisiones en docs/decisiones.md. SIGUE: F6; el autor versiona aún reports/prueba_final.md, su figura y runs/prueba_final*.
 - Git: rama main; `* -text` salvo `*.py` y `docs/prerregistro*.md` (`eol=lf`). data/raw versionado; data/processed, runs/**/*.csv.gz y .playwright-mcp ignorados. A1 pasos 2-9 pendientes.
 - Datos: data/raw (inmutable) -> data/processed. EDA en reports/fase0.md. trm.csv: 8387 observaciones (≈ 20 por mes), 1991-12-02 a 2026-11-14.
 - Backtest: origen móvil desde 2005-01-03, ventana expansiva, reajuste 21, embargo = h_max. Corridas de desarrollo en runs/backtest_desarrollo/ (17 modelos, h 1-63) y runs/backtest_largo/ (15, h 126/252).
@@ -12,4 +12,4 @@ Fases 0-2, F1, O1-O3, F2, F3, F4, O4 (prueba final) y F5 (código) completas. De
 - F5 respaldo: `data/respaldo/prueba_final.json` (`python -m laboratorio.motor respaldo`) entra en el hash de datos. Reporte: §4 Monte Carlo junto a la empírica (costo total «sin respaldo fuera de muestra», respaldo indirecto), §5 abanico con cobertura medida por horizonte y advertencia siempre a 63/126/252; LightGBM solo citado a h = 1. Figura reports/figs/compra_dolares_abanico.png.
 - F5 hallazgo a revisar en F6: el motor filtrado arrastra la deriva histórica (mediana a 252 días ≈ +9 % sobre hoy con 500 trayectorias de humo; base determinista ≈ +1,5 %/año); sube el costo esperado y P(superar presupuesto). Declarado en el reporte; el motor no se cambia.
 - F5 pruebas: tests/test_montecarlo.py (volatilidad cero = determinista, misma semilla = mismo hash, bloque 1 = bootstrap simple) y tests/test_caso_compra_dolares.py con 300 trayectorias. `hash_codigo` actual ≠ prerregistro (esperado; se reproduce con `git checkout prerregistro-adenda-1`).
-- Pendiente del autor: `$env:PYTHONPATH = "src"; python -m laboratorio.motor compra_dolares --trayectorias 10000`, luego versionar reports/compra_dolares.md, la figura y runs/<corrida>/.
+- F5 corrida final (commit dee4959): 10.000 trayectorias, semilla 20240501, corrida 200b84c2c1a1; reports/compra_dolares.md y su figura versionados. Motor: P(superar presupuesto) 45,4 % vs 33,4 % sin filtrar y 25,5 % histórico (efecto de la deriva, declarado).
