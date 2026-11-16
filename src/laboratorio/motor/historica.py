@@ -99,6 +99,23 @@ def ratios_todas(trm: pd.Series, plan: PlanCompra, desde) -> tuple[pd.DatetimeIn
     return inicios, niveles / trm.loc[inicios].to_numpy()[:, None]
 
 
+def pasos_por_compra(trm: pd.Series, plan: PlanCompra, desde) -> tuple[int, ...]:
+    """Observaciones de la serie (días con TRM) entre hoy y cada compra del plan.
+
+    Mediana, sobre las mismas ventanas de `ratios_todas`, del número de observaciones entre el
+    inicio y inicio + m meses. Así el Monte Carlo (que avanza por observaciones) y la
+    distribución histórica (que avanza por meses de calendario) usan la misma escala de tiempo.
+    La compra de hoy (m = 0) queda en el paso 0.
+    """
+    limite = desplazar_meses(trm.index[-1], -plan.horizonte_meses)
+    inicios = trm.index[(trm.index >= pd.Timestamp(desde)) & (trm.index <= limite)]
+    if len(inicios) == 0:
+        raise ValueError("ninguna ventana cabe en los datos con ese plan y fecha 'desde'")
+    base = _asof_pos(trm, inicios)
+    return tuple(int(np.floor(np.median(_asof_pos(trm, inicios + pd.DateOffset(months=m)) - base)
+                              + 0.5)) for m in plan.meses)
+
+
 def distribucion(plan: PlanCompra, trm: pd.Series, trm0: float, desde) -> DistribucionHistorica:
     """Costo en COP del plan, hoy, bajo cada ventana histórica real (empírica, sin supuestos).
 

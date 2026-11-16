@@ -191,3 +191,30 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
   adendas como etiquetas nuevas). `docs/prerregistro_borrador.md` pasó a `docs/prerregistro.md`,
   commit `prerregistro prueba final`, etiqueta `prerregistro-final`. Desde aquí `src/`, `data/` y
   el prerregistro no se tocan hasta después de la corrida. La prueba final NO se ha corrido.
+
+## 16-nov-2026 · F5 (Monte Carlo en el caso)
+- **El motor del caso es el modelo evaluado, sin reescribir.** `motor/montecarlo.py` instancia
+  `BootstrapEstacionario`, usa su `ajustar` y `trayectorias` y el mismo generador por origen; una
+  prueba exige cuantiles idénticos a `pronosticar`. F5 no toca `modelos/`, `backtest/` ni
+  `evaluacion/`. Descartado: un bootstrap propio del caso (no tendría evaluación).
+- **Toda la historia, no solo flotación** (D1 pedía flotación). Motivo: es la muestra del modelo
+  evaluado; con otra, las coberturas medidas no respaldarían las cifras. Costo declarado en el
+  reporte: la deriva histórica entra en las trayectorias (mediana a 252 días por encima de hoy) y
+  en el motor filtrado pesa más que en el simple. No se corrige: el motor quedó prerregistrado.
+- **Meses → pasos desde los datos** (`historica.pasos_por_compra`: mediana de observaciones por
+  ventana). La serie trae ≈ 20 observaciones por mes: la última compra cae a 217 días con TRM, no
+  a los «unos 230» del prerregistro. Descartado: 21 pasos por mes (alargaría el horizonte ≈ 5 %).
+- **Sin variante con modelos** (decisión del autor): `lightgbm_cuantiles` solo se cita a h = 1
+  (CRPS/base y su cola superior subcubierta); el caso no calcula su banda ni lo usa para simular.
+- **Respaldo como dato con hash**: `data/respaldo/prueba_final.json` (`python -m laboratorio.motor
+  respaldo`) resume la prueba final con `cobertura_motor`, `confirmar` y `pruebas_var`; entra en
+  el hash de datos del caso. Sin archivo, todo dice «sin respaldo fuera de muestra».
+  Descartado: leer `runs/**/*.csv.gz` en cada corrida (no están versionados).
+- **Qué respalda qué**: la banda del 95 % de la TRM a 1/5/21/63/126/252 cita su cobertura medida
+  y n efectivo (advertencia siempre a 63/126/252); el costo total y sus probabilidades quedan
+  «sin respaldo fuera de muestra» con la frase de respaldo indirecto del prerregistro.
+- **Semilla y trayectorias en la ficha**, no en el registro de supuestos (que no cambia).
+- **Hash de la prueba final.** F5 modifica `src/`, así que el `hash_codigo` actual ya no coincide
+  con el del prerregistro ni con el de los resultados. El de la prueba final se reproduce con
+  `git checkout prerregistro-adenda-1` (y `python -m laboratorio.backtest final --hashes`); la
+  prueba no se puede repetir (HECHO.json) y `final --verificar` fallará desde este commit: es lo esperado.
