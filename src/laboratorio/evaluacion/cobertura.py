@@ -27,6 +27,24 @@ def cobertura_intervalo(y, inferior, superior) -> float:
     return float(np.mean((y >= lo) & (y <= hi)))
 
 
+def cobertura_n_efectivo(y, inferior, superior, nominal: float, h: int) -> dict:
+    """Cobertura de un intervalo con observaciones traslapadas a h pasos (horizontes largos).
+
+    n efectivo = n/h (ventanas independientes). El intervalo de confianza del 95 % es el binomial
+    exacto (Clopper-Pearson) con k_ef = cobertura·n_ef aciertos en n_ef ensayos (ambos redondeados
+    al entero más cercano, n_ef ≥ 1). `compatible` = el nominal cae dentro de ese intervalo. Es
+    descriptivo: con n_ef pequeño casi cualquier nominal es compatible.
+    """
+    cob = cobertura_intervalo(y, inferior, superior)
+    n = len(np.asarray(y))
+    ne = max(int(round(n / h)), 1)
+    k = int(round(cob * ne))
+    lo = 0.0 if k == 0 else float(stats.beta.ppf(0.025, k, ne - k + 1))
+    hi = 1.0 if k == ne else float(stats.beta.ppf(0.975, k + 1, ne - k))
+    return {"cobertura": cob, "nominal": nominal, "n": n, "n_efectivo": ne, "k_efectivo": k,
+            "ic_inf": lo, "ic_sup": hi, "compatible": bool(lo <= nominal <= hi)}
+
+
 def calibracion(y, q, niveles, n_efectivo: float | None = None) -> pd.DataFrame:
     """Frecuencia observada de y ≤ q_τ contra el nivel nominal τ.
 

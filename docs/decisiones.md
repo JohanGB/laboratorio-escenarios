@@ -82,3 +82,27 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
   acumulada depende de la trayectoria).
 - **Diagnóstico** (reports/o2_markov.md): el estado alto domina en 2008 y 2014-2015; con 2 estados
   separa sobre todo banda vs. flotación. Ambas variantes van al backtest; decide el MCS.
+
+## 15-nov-2026 · F2 (pruebas que faltan)
+- **ES desde la corrida (decisión A, confirmada por el autor).** El corredor pide en UNA llamada
+  `NIVELES` + `NIVELES_COLA` + una rejilla de 25 puntos medios por cola (α = 0,025) y guarda
+  `runs/backtest_desarrollo/cola/<modelo>.csv.gz` (c_<nivel>, es_inf, es_sup). Mismas
+  simulaciones: la tabla principal y el CRPS no cambian (hay prueba). Error de la rejilla frente
+  a la normal exacta < 0,5 %. Regresión por cuantiles y LightGBM: ES «no aplica» (un modelo por
+  nivel, entrenados solo para los 11 niveles). Sin cola en la corrida larga.
+- **Z2 de Acerbi-Székely solo a h = 1**, contra los umbrales del artículo (−0,70 al 5 %); sin
+  p-valor exacto porque no se guardan las simulaciones.
+- **Uniformidad del PIT: ji-cuadrado por casillas (decisión B; el autor delegó la elección).**
+  Descartada: Kolmogorov-Smirnov sobre el PIT interpolado. Motivo: con 11 cuantiles el PIT no
+  se conoce por debajo de 1 % ni por encima de 99 %, y KS dependería de cómo se rellenen las
+  colas, que es justo lo que interesa. La ji-cuadrado es exacta a h = 1; a h > 1 usa n/h, fusiona
+  casillas con < 5 esperadas y se marca «aproximada». El PIT interpolado queda para figuras.
+- **MCS**: `arch.bootstrap.MCS`, α = 0,10, estadístico de rango, bootstrap estacionario, 5000
+  réplicas, bloque máx(2h, 10), semilla fija, orígenes comunes. Compara todo el catálogo, líneas
+  base incluidas. Columnas idénticas se calculan una vez (arch falla con varianza cero).
+- **Acierto direccional solo a h = 1** (binomial y Pesaran-Timmermann), con la mediana como
+  pronóstico; ceros descartados. En modelos de media cero que simulan, la mediana es ruido.
+- **Horizontes largos**: cobertura 90 % y 95 % con Clopper-Pearson y n/h; descriptivo, sin MCS.
+- **Alcance (decisión C)**: el reporte de fase 2 ya incluye las secciones nuevas (probado con
+  datos sintéticos). O3 solo corre. El caché exige la tabla de cola: los modelos que pueden
+  darla se vuelven a correr solos; aun así O3 debe usar `--forzar` por el cambio de O1.

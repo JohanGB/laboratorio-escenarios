@@ -27,6 +27,9 @@ PARAMS_LGBM = dict(n_estimators=150, learning_rate=0.03, num_leaves=7, min_child
 class _Estandarizado(Pronosticador):
     columnas: list[str]
     exige_completas = True          # QR: filas con todas las columnas finitas
+    cola_defendible = False
+    motivo_sin_cola = ("entrena un modelo por nivel solo para los 11 niveles del protocolo; un "
+                       "cuantil del 0,25 % se apoyaría en muy pocas observaciones por nivel")
 
     def __init__(self, columnas: list[str] | None = None, semilla: int = 20240501, horizontes=None):
         super().__init__(*(() if horizontes is None else (horizontes,)))

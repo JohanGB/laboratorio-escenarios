@@ -115,3 +115,56 @@ def test_la_prueba_final_no_se_carga_en_desarrollo():
     assert v.fechas[i] >= pd.Timestamp("2005-01-03") and v.fechas[i - 1] < pd.Timestamp("2005-01-03")
     assert set(v.externas.columns) == {"brent_usd", "dolar_amplio", "fed_funds", "politica"}
     assert v.banda[:100].all() and not v.banda[-100:].any()
+
+
+# ---- F2: tabla de cola (NIVELES_COLA y ES) sin alterar la tabla principal ---------------------
+def test_tabla_de_cola_no_cambia_la_principal_y_el_es_es_coherente():
+    from scipy import stats
+    from laboratorio.backtest.corredor import correr, correr_con_cola
+    from laboratorio.backtest.particion import ALFA_ES, NIVELES_COLA
+    from laboratorio.modelos.bootstrap import BootstrapEstacionario
+    from laboratorio.modelos.cuantiles import RegresionCuantiles
+    from laboratorio.modelos.lineas_base import EWMA
+    from test_sin_fuga import vista
+    v = vista()
+    for m in (EWMA(), BootstrapEstacionario(sims=400)):
+        sola = correr(m, v, primero=600, paso=63)
+        df, cola = correr_con_cola(m, v, primero=600, paso=63)
+        assert df.equals(sola)                                  # mismas simulaciones
+        assert list(cola.columns[:5]) == list(df.columns[:5])
+        assert [c for c in cola.columns if c.startswith("c_")] == [f"c_{t:g}" for t in NIVELES_COLA]
+        assert len(cola) == len(df) and (cola.origen == df.origen).all() and (cola.y == df.y).all()
+        # coherencia con la principal y orden: ES más extremo que el VaR del mismo nivel
+        assert np.allclose(cola["c_0.025"], df["q_0.025"]) and np.allclose(cola["c_0.99"], df["q_0.99"])
+        assert (cola.es_inf < cola["c_0.025"]).all() and (cola.es_sup > cola["c_0.975"]).all()
+    # EWMA es normal: ES = ∓σ·φ(z)/α y VaR = ∓σ·z → cociente ES/VaR = φ(z)/(α·z) = 1,1928
+    z = stats.norm.ppf(1 - ALFA_ES)
+    df, cola = correr_con_cola(EWMA(), v, primero=600, paso=63)
+    assert np.allclose(cola.es_inf / cola["c_0.025"], stats.norm.pdf(z) / (ALFA_ES * z), rtol=0.005)
+    q = RegresionCuantiles()
+    assert not q.cola_defendible and "11 niveles" in q.motivo_sin_cola
+    assert correr_con_cola(q, v, primero=600, paso=63, ultimo=640)[1] is None
+
+
+def test_todo_modelo_del_catalogo_da_cola_o_declara_el_motivo():
+    """Cada clase del catálogo corto: tabla de cola finita y ordenada, o «no aplica» con motivo."""
+    from laboratorio.backtest.catalogo import FABRICAS as CATALOGO
+    from laboratorio.backtest.corredor import correr_con_cola
+    from test_sin_fuga import FABRICAS as CANARIO, vista
+    v = vista()
+    clases = {type(f()) for f, _ in CATALOGO.values()}
+    vistos = set()
+    for nombre, fab in CANARIO.items():
+        m = fab()
+        if nombre.endswith("_largo") or type(m) not in clases:
+            continue
+        vistos.add(type(m))
+        df, cola = correr_con_cola(m, v, primero=600, paso=63, ultimo=620)
+        if not m.cola_defendible:
+            assert cola is None and m.motivo_sin_cola, nombre
+            continue
+        c = cola.filter(regex="^c_").to_numpy()
+        assert np.isfinite(c).all() and (np.diff(c, axis=1) >= -1e-12).all(), nombre
+        assert (cola.es_inf <= cola["c_0.025"]).all() and (cola.es_sup >= cola["c_0.975"]).all(), nombre
+        assert np.allclose(cola["c_0.01"], df["q_0.01"], rtol=1e-9, atol=1e-12), nombre
+    assert vistos == clases

@@ -25,3 +25,8 @@ HORIZONTES_LARGOS = (126, 252)
 # Niveles de cola para ES y Acerbi-Székely (ambas colas: la superior es el alza del dólar).
 # El CRPS y el pinball siguen con NIVELES.
 NIVELES_COLA = np.array([0.0025, 0.005, 0.01, 0.025, 0.975, 0.99, 0.995, 0.9975])
+# ES al 97,5 % (F2): promedio de PUNTOS_REJILLA_ES cuantiles en los puntos medios de cada cola de
+# probabilidad ALFA_ES. Se piden en la misma llamada que NIVELES (mismas simulaciones) y se
+# guardan aparte (runs/.../cola/); el CSV principal y el CRPS no cambian.
+ALFA_ES = 0.025
+PUNTOS_REJILLA_ES = 25

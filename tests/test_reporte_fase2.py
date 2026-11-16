@@ -38,8 +38,29 @@ def test_reporte_marca_descartado_al_candidato_que_no_supera_la_base(tmp_path):
     c = comparar(cargar(d)[0])
     assert set(c[c.modelo == "ancho"].estado) == {"descartado"}
     assert c[(c.modelo == "ewma_0.94") & (c.h == 1)].estado.iloc[0] == "supera"
-    out = generar(tmp_path, directorio=d, salida=tmp_path / "fase2.md")
+    from laboratorio.backtest.corredor import correr_con_cola
+    from laboratorio.backtest.particion import HORIZONTES_LARGOS
+    (d / "cola").mkdir()
+    correr_con_cola(EWMA(), v, primero=800, paso=63)[1].to_csv(
+        d / "cola" / "ewma_0.94.csv.gz", index=False, compression="gzip")
+    largo = tmp_path / "backtest_largo"; largo.mkdir()
+    correr(EWMA(horizontes=HORIZONTES_LARGOS), v, primero=800, paso=63).to_csv(
+        largo / "ewma_0.94.csv.gz", index=False, compression="gzip")
+    out = generar(tmp_path, directorio=d, salida=tmp_path / "fase2.md", reps_mcs=300)
     texto = out.read_text(encoding="utf-8")
+    # F2: secciones nuevas
+    for titulo in ("## Model Confidence Set", "## Semáforo de Basilea", "## Expected Shortfall",
+                   "## Uniformidad del PIT", "## Acierto direccional", "## Horizontes largos"):
+        assert titulo in texto, titulo
+    mcs = texto.split("## Model Confidence Set")[1].split("## Semáforo")[0]
+    assert "| ancho |" in mcs and "| no |" in mcs               # el candidato malo sale del MCS
+    es = texto.split("## Expected Shortfall")[1].split("## Uniformidad")[0]
+    assert "| ewma_0.94 | inferior |" in es and "`ancho`: no aplica" in es
+    assert "| ewma_0.94 | 252 | 95 % |" in texto.split("## Horizontes largos")[1]
+    assert (tmp_path / "figs" / "fase2_pit.png").exists()
+    # caminata y EWMA tienen mediana cero: sin dirección
+    assert "| caminata_aleatoria | no aplica |" in texto.split("## Acierto direccional")[1]
     assert "| ancho | candidato | ninguno | **DESCARTADO**" in texto
     assert "crisis_x" in texto and "Kupiec" in texto and "## Horizonte h = 63" in texto
+    assert "## Pruebas de VaR al 95 % y 99 % en ambas colas" in texto
     assert "línea base" in texto

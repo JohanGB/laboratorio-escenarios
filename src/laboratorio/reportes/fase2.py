@@ -97,10 +97,15 @@ def _p(x):
 
 
 def generar(raiz: str | Path = ".", directorio: str | Path | None = None,
-            salida: str | Path | None = None) -> Path:
+            salida: str | Path | None = None, directorio_largo: str | Path | None = None,
+            reps_mcs: int | None = None) -> Path:
+    from ..evaluacion.mcs import REPS_MCS
+    from .pruebas_f2 import secciones
     raiz = Path(raiz)
     directorio = Path(directorio) if directorio else raiz / "runs" / "backtest_desarrollo"
     salida = Path(salida) if salida else raiz / "reports" / "fase2.md"
+    directorio_largo = Path(directorio_largo) if directorio_largo else directorio.parent / "backtest_largo"
+    res_largo = cargar(directorio_largo)[0] if directorio_largo.exists() else {}
     res, meta = cargar(directorio)
     if not res:
         raise FileNotFoundError(f"sin resultados en {directorio}")
@@ -168,7 +173,8 @@ def generar(raiz: str | Path = ".", directorio: str | Path | None = None,
         L += [tabla(pd.DataFrame(filas, columns=cols)), "",
               "n por grupo: " + ", ".join(f"{g} = {int(n_g[g])}" for g in grupos), ""]
 
-    L += ["## Pruebas de VaR a h = 1 (Kupiec y Christoffersen)", "",
+    L += ["## Pruebas de VaR al 95 % y 99 % en ambas colas, h = 1 (Kupiec y Christoffersen)", "",
+          "Cola inf = caída del dólar; sup = alza.", "",
           "Tasa = proporción de violaciones (esperada 0,01 o 0,05). p_uc = Kupiec; p_ind = independencia "
           "de Christoffersen; p_cc = cobertura condicional. p < 0,05 rechaza la calibración de esa cola.", ""]
     filas = []
@@ -178,12 +184,16 @@ def generar(raiz: str | Path = ".", directorio: str | Path | None = None,
             filas.append([m, cola, _f(tasa, 4), _p(puc), _p(pind), _p(pcc)])
     L += [tabla(pd.DataFrame(filas, columns=["modelo", "cola", "tasa", "p_uc", "p_ind", "p_cc"])), ""]
 
+    L += secciones(res, meta, directorio / "cola", res_largo, salida.parent / "figs",
+                   reps_mcs=reps_mcs or REPS_MCS)
+
     L += ["## Detalle Diebold-Mariano (candidato vs. mejor línea base)", "",
           tabla(pd.DataFrame([[r.modelo, r.h, r.linea_base, _f(r.relativo, 3), _f(r.dm_t, 2), _p(r.dm_p),
                                r.rezagos, r.n, r.estado] for r in cmp_.itertuples()],
                              columns=["modelo", "h", "línea base", "CRPS/base", "t (HLN)", "p", "rezagos",
                                       "n", "estado"])), "",
           "## Reproducir", "", "```", "PYTHONPATH=src python -m laboratorio.backtest correr",
+          "PYTHONPATH=src python -m laboratorio.backtest correr --largo",
           "PYTHONPATH=src python -m laboratorio.backtest reporte", "```", ""]
     hashes = {md.get("hash_trm_csv") for md in meta.values() if md}
     if hashes:

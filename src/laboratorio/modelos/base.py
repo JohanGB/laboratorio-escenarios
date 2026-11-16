@@ -21,6 +21,10 @@ from ..backtest.particion import HORIZONTES
 
 class Pronosticador(ABC):
     nombre: str = "modelo"
+    # ¿Puede dar cuantiles extremos (NIVELES_COLA y la rejilla del ES) defendibles? Los modelos que
+    # simulan o tienen forma cerrada, sí. Los que entrenan un modelo por nivel, no: lo declaran.
+    cola_defendible: bool = True
+    motivo_sin_cola: str = ""
 
     def __init__(self, horizontes=HORIZONTES) -> None:
         self.horizontes = tuple(horizontes)

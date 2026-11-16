@@ -5,6 +5,8 @@
 Resultados por modelo en runs/backtest_desarrollo/<modelo>.csv.gz + <modelo>.json (caché).
 Con --largo: horizontes 126 y 252 (FABRICAS_LARGOS) en runs/backtest_largo/, corrida aparte
 con su propio embargo (no altera los orígenes de la corrida corta).
+Corrida corta: además runs/backtest_desarrollo/cola/<modelo>.csv.gz con NIVELES_COLA y el ES
+(F2), para los modelos que pueden darlo; si falta ese archivo el modelo se vuelve a correr.
 """
 from __future__ import annotations
 
@@ -15,7 +17,7 @@ import time
 from pathlib import Path
 
 from .catalogo import FABRICAS, FABRICAS_LARGOS
-from .corredor import correr
+from .corredor import correr_con_cola
 from .datos import cargar_desarrollo
 from .particion import INICIO_DESARROLLO, INICIO_PRUEBA_FINAL
 
@@ -34,18 +36,25 @@ def correr_modelos(raiz: Path, nombres: list[str], forzar: bool = False, largo: 
     out.mkdir(parents=True, exist_ok=True)
     for nombre in nombres:
         csv, meta = out / f"{nombre}.csv.gz", out / f"{nombre}.json"
-        if csv.exists() and meta.exists() and not forzar:
-            print(f"{nombre}: en caché"); continue
         fabrica, paso = catalogo[nombre]
         m = fabrica()
-        t0 = time.time()
-        df = correr(m, vista, paso=paso)
-        seg = time.time() - t0
+        con_cola = (not largo) and m.cola_defendible
+        csv_cola = out / "cola" / f"{nombre}.csv.gz"
+        if csv.exists() and meta.exists() and (csv_cola.exists() or not con_cola) and not forzar:
+            print(f"{nombre}: en caché"); continue
+        t0 = time.perf_counter()
+        df, cola = correr_con_cola(m, vista, paso=paso, con_cola=con_cola)
+        seg = time.perf_counter() - t0
         df.to_csv(csv, index=False, compression="gzip")
+        if cola is not None:
+            csv_cola.parent.mkdir(exist_ok=True)
+            cola.to_csv(csv_cola, index=False, compression="gzip")
         info = {"modelo": nombre, "parametros": m.parametros(), "paso_reajuste": paso,
                 "segundos": round(seg, 1), "fallos_estimacion": getattr(m, "fallos", 0),
                 "reajustes": getattr(m, "reajustes", None), "n_origenes": int(df["origen"].nunique()),
                 "horizontes": list(m.horizontes),
+                "es": ("aplica" if cola is not None else
+                       "no aplica: " + (m.motivo_sin_cola or "no se calcula en la corrida larga")),
                 "primer_origen": str(df["fecha"].min())[:10], "ultimo_origen": str(df["fecha"].max())[:10],
                 "inicio_desarrollo": INICIO_DESARROLLO, "corte_prueba_final": INICIO_PRUEBA_FINAL,
                 "ultimo_dato_cargado": str(vista.fechas.max())[:10],
