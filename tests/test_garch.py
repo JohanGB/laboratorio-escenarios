@@ -148,6 +148,18 @@ def simular_gjr_skewt(n, w=0.02, a=0.04, b=0.90, g=0.08, nu=6, lam=-0.3, seed=0)
     return out / 100.0
 
 
+@pytest.mark.parametrize("nu,lam", [(6.0, -0.3), (4.5, 0.4), (30.0, 0.0)])
+def test_skewt_muestreo_exacto_coincide_con_la_ppf_de_arch(nu, lam):
+    """El muestreo de dos lados tiene la misma distribución que invertir la CDF de `arch`."""
+    from arch.univariate import SkewStudent
+    z = skewt_estandarizada(np.random.default_rng(7), nu, lam, 400_000)
+    u = np.array([0.001, 0.01, 0.05, 0.25, 0.5, 0.75, 0.95, 0.99, 0.999])
+    teor = SkewStudent().ppf(u, np.array([nu, lam]))
+    assert np.quantile(z, u) == pytest.approx(teor, abs=0.03, rel=0.02)
+    cdf = SkewStudent().cdf(np.sort(z[:20000]), np.array([nu, lam]))
+    assert stats.kstest(cdf, "uniform").pvalue > 0.001
+
+
 def test_skewt_estandarizada_media_cero_varianza_uno_y_asimetria():
     z = skewt_estandarizada(np.random.default_rng(0), 6, -0.3, 400_000)
     assert z.var() == pytest.approx(1.0, rel=0.03) and abs(z.mean()) < 0.01

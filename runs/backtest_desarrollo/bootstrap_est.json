@@ -1,0 +1,29 @@
+{
+  "modelo": "bootstrap_est",
+  "parametros": {
+    "filtrado": false,
+    "sims": 4000,
+    "semilla": 20240501,
+    "bloque": "politis_white(max serie, |serie|)",
+    "lam_ewma": 0.94,
+    "ventana": "expansiva (toda la historia)"
+  },
+  "paso_reajuste": 21,
+  "segundos": 34.5,
+  "fallos_estimacion": 0,
+  "reajustes": 167,
+  "n_origenes": 3493,
+  "horizontes": [
+    1,
+    5,
+    21,
+    63
+  ],
+  "es": "aplica",
+  "primer_origen": "2005-01-04",
+  "ultimo_origen": "2019-09-26",
+  "inicio_desarrollo": "2005-01-03",
+  "corte_prueba_final": "2020-01-01",
+  "ultimo_dato_cargado": "2019-12-31",
+  "hash_trm_csv": "641393c5df0c869b"
+}

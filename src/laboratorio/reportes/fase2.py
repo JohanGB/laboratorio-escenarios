@@ -88,6 +88,16 @@ def pruebas_var(df: pd.DataFrame) -> dict[str, tuple]:
     return out
 
 
+def _otros_pasos(meta: dict[str, dict]) -> str:
+    """« (markov_3 y lightgbm_cuantiles cada 63)» según el paso de reajuste guardado en cada corrida."""
+    otros: dict[int, list[str]] = {}
+    for m, md in sorted(meta.items()):
+        paso = md.get("paso_reajuste")
+        if paso and paso != 21:
+            otros.setdefault(int(paso), []).append(m)
+    return "".join(f" ({' y '.join(ms)} cada {p})" for p, ms in sorted(otros.items()))
+
+
 def _f(x, d=3):
     return "—" if x is None or (isinstance(x, float) and np.isnan(x)) else f"{x:.{d}f}"
 
@@ -123,7 +133,7 @@ def generar(raiz: str | Path = ".", directorio: str | Path | None = None,
          f"- Orígenes: {str(ej['fecha'].min())[:10]} a {str(ej['fecha'].max())[:10]} "
          f"({ej['origen'].nunique()} por horizonte); inicio de desarrollo {INICIO_DESARROLLO}. "
          f"La prueba final (desde {INICIO_PRUEBA_FINAL}) NO se cargó.",
-         "- Ventana expansiva, reajuste cada 21 orígenes (LightGBM cada 63), purga s+h ≤ t, embargo de 63 obs.",
+         "- Ventana expansiva, reajuste cada 21 orígenes" + _otros_pasos(meta) + ", purga s+h ≤ t, embargo de 63 obs.",
          "- CRPS aproximado por 11 cuantiles (0,01–0,99), en puntos porcentuales de rendimiento log; "
          "menor es mejor. IS95 = puntaje de intervalo del 95 %. cob = cobertura observada.",
          "- **Criterio de descarte** (fijado antes de correr): en cada horizonte la referencia es la mejor "

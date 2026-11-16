@@ -66,10 +66,23 @@ def t_estandarizada(rng: np.random.Generator, nu: float, size) -> np.ndarray:
 
 
 def skewt_estandarizada(rng: np.random.Generator, nu: float, lam: float, size) -> np.ndarray:
-    """t asimétrica de Hansen (1994) con media 0 y varianza 1 (misma que `arch`), por inversión."""
-    from arch.univariate import SkewStudent
-    u = rng.random(size)
-    return SkewStudent().ppf(u.ravel(), np.array([nu, lam])).reshape(np.shape(u))
+    """t asimétrica de Hansen (1994) con media 0 y varianza 1 (la misma de `arch`), muestreo exacto.
+
+    Hansen: con w = b·z + a, la densidad de w es el núcleo de s·T (T ~ t(ν), s = √((ν−2)/ν)) con
+    escala (1−λ) a la izquierda de 0 y (1+λ) a la derecha. Por eso w = −(1−λ)·s·|T| con
+    probabilidad (1−λ)/2 y w = (1+λ)·s·|T| con probabilidad (1+λ)/2, y z = (w − a)/b, donde
+    c = Γ((ν+1)/2)/(√(π(ν−2))·Γ(ν/2)), a = 4λc(ν−2)/(ν−1), b² = 1 + 3λ² − a².
+    O3: reemplaza la inversión con `arch.SkewStudent.ppf` (≈ 10 veces más lenta); hay prueba
+    de que ambas dan la misma distribución.
+    """
+    from scipy.special import gammaln
+    c = np.exp(gammaln((nu + 1) / 2) - gammaln(nu / 2)) / np.sqrt(np.pi * (nu - 2))
+    a = 4 * lam * c * (nu - 2) / (nu - 1)
+    b = np.sqrt(1 + 3 * lam ** 2 - a ** 2)
+    t = np.abs(rng.standard_t(nu, size)) * np.sqrt((nu - 2) / nu)
+    izquierda = rng.random(size) < (1 - lam) / 2
+    w = np.where(izquierda, -(1 - lam) * t, (1 + lam) * t)
+    return (w - a) / b
 
 
 def innovaciones(rng: np.random.Generator, p: dict, size) -> np.ndarray:

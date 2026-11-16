@@ -2,10 +2,17 @@
   "modelo": "caminata_aleatoria",
   "parametros": {},
   "paso_reajuste": 21,
-  "segundos": 0.7,
+  "segundos": 3.1,
   "fallos_estimacion": 0,
   "reajustes": null,
   "n_origenes": 3493,
+  "horizontes": [
+    1,
+    5,
+    21,
+    63
+  ],
+  "es": "aplica",
   "primer_origen": "2005-01-04",
   "ultimo_origen": "2019-09-26",
   "inicio_desarrollo": "2005-01-03",

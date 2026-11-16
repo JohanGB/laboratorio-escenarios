@@ -6,13 +6,22 @@
     "media": "cero",
     "sims": 4000,
     "semilla": 20240501,
-    "ventana": "expansiva"
+    "ventana": "expansiva",
+    "arranque": "caliente",
+    "tol_persistencia": 0.0001
   },
   "paso_reajuste": 21,
-  "segundos": 88.2,
-  "fallos_estimacion": 38,
+  "segundos": 82.9,
+  "fallos_estimacion": 0,
   "reajustes": 167,
   "n_origenes": 3493,
+  "horizontes": [
+    1,
+    5,
+    21,
+    63
+  ],
+  "es": "aplica",
   "primer_origen": "2005-01-04",
   "ultimo_origen": "2019-09-26",
   "inicio_desarrollo": "2005-01-03",

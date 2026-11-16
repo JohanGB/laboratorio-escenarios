@@ -106,3 +106,14 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
 - **Alcance (decisión C)**: el reporte de fase 2 ya incluye las secciones nuevas (probado con
   datos sintéticos). O3 solo corre. El caché exige la tabla de cola: los modelos que pueden
   darla se vuelven a correr solos; aun así O3 debe usar `--forzar` por el cambio de O1.
+
+## 15-nov-2026 · O3 (backtest completo)
+- **Muestreo exacto de la t asimétrica** (dos lados de Hansen: |t| escalado por 1−λ o 1+λ) en
+  lugar de invertir la CDF con `arch.SkewStudent.ppf`. Motivo: la inversión costaba ≈ 0,19 s por
+  origen (≈ 40 min en la corrida larga, sobre el límite de 15); subir el paso de reajuste no
+  servía porque el costo era simular. Misma distribución (prueba contra la ppf de `arch`).
+  Ningún resultado previo usaba la versión vieja.
+- **Ningún paso de reajuste cambió**: ningún modelo pasó de 15 min (máximo reg_cuantiles 10,6 min
+  en la corta; markov_3 6,3 min en la larga). Corta y larga en paralelo (2 procesos, 4 núcleos):
+  34 y 40 min. RAM: ≤ 190 MB por proceso, mínimo libre 0,58 GB de 8 (runs/o3_ram.log).
+- El protocolo del reporte arma los pasos de reajuste desde los metadatos de cada corrida.

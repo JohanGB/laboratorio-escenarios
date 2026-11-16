@@ -1,0 +1,18 @@
+2026-11-15T22:59:15-05:00
+caminata_aleatoria: 1 s, fallos=0
+sim_hist_756: 1 s, fallos=0
+sim_hist_pond: 4 s, fallos=0
+ewma_0.94: 1 s, fallos=0
+garch_t: 231 s, fallos=0
+gjr_t: 221 s, fallos=1
+egarch_t: 245 s, fallos=0
+bootstrap_est: 101 s, fallos=0
+bootstrap_est_filtrado: 115 s, fallos=0
+gjr_skewt: 320 s, fallos=1
+egarch_skewt: 314 s, fallos=0
+fhs_ewma: 63 s, fallos=0
+fhs_gjr: 71 s, fallos=1
+markov_2: 298 s, fallos=0
+markov_3: 380 s, fallos=0
+fin larga: 0
+2026-11-15T23:38:57-05:00

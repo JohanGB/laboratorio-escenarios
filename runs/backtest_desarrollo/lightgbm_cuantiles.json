@@ -34,10 +34,17 @@
     }
   },
   "paso_reajuste": 63,
-  "segundos": 208.0,
+  "segundos": 294.1,
   "fallos_estimacion": 0,
   "reajustes": 56,
   "n_origenes": 3493,
+  "horizontes": [
+    1,
+    5,
+    21,
+    63
+  ],
+  "es": "no aplica: entrena un modelo por nivel solo para los 11 niveles del protocolo; un cuantil del 0,25 % se apoyaría en muy pocas observaciones por nivel",
   "primer_origen": "2005-01-04",
   "ultimo_origen": "2019-09-26",
   "inicio_desarrollo": "2005-01-03",

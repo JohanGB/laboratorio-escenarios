@@ -1,0 +1,20 @@
+2026-11-15T22:59:15-05:00
+caminata_aleatoria: 3 s, fallos=0
+sim_hist_756: 4 s, fallos=0
+sim_hist_pond: 12 s, fallos=0
+ewma_0.94: 2 s, fallos=0
+garch_t: 83 s, fallos=0
+gjr_t: 74 s, fallos=1
+egarch_t: 79 s, fallos=0
+reg_cuantiles: 636 s, fallos=0
+lightgbm_cuantiles: 294 s, fallos=0
+bootstrap_est: 34 s, fallos=0
+bootstrap_est_filtrado: 38 s, fallos=0
+gjr_skewt: 97 s, fallos=1
+egarch_skewt: 98 s, fallos=0
+fhs_ewma: 26 s, fallos=0
+fhs_gjr: 37 s, fallos=1
+markov_2: 165 s, fallos=0
+markov_3: 318 s, fallos=0
+fin corta: 0
+2026-11-15T23:33:20-05:00

@@ -1,0 +1,29 @@
+{
+  "modelo": "markov_2",
+  "parametros": {
+    "estados": 2,
+    "media": "cero",
+    "varianza": "por estado",
+    "dist": "normal",
+    "sims": 4000,
+    "semilla": 20240501,
+    "ventana": "expansiva",
+    "arranque": "caliente"
+  },
+  "paso_reajuste": 21,
+  "segundos": 297.9,
+  "fallos_estimacion": 0,
+  "reajustes": 158,
+  "n_origenes": 3304,
+  "horizontes": [
+    126,
+    252
+  ],
+  "es": "no aplica: no se calcula en la corrida larga",
+  "primer_origen": "2005-01-04",
+  "ultimo_origen": "2018-12-11",
+  "inicio_desarrollo": "2005-01-03",
+  "corte_prueba_final": "2020-01-01",
+  "ultimo_dato_cargado": "2019-12-31",
+  "hash_trm_csv": "641393c5df0c869b"
+}
