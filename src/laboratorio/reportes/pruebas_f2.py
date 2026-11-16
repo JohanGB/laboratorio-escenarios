@@ -136,7 +136,8 @@ def seccion_es(res, meta, dir_cola: Path) -> list[str]:
     return L
 
 
-def seccion_pit(res, mejor: dict[int, str], dir_figs: Path, rel_figs: str) -> list[str]:
+def seccion_pit(res, mejor: dict[int, str], dir_figs: Path, rel_figs: str,
+                nombre_fig: str = "fase2_pit.png") -> list[str]:
     L = ["## Uniformidad del PIT", "",
          "Ji-cuadrado sobre las 12 casillas que definen los 11 cuantiles (si el pronóstico está "
          "calibrado, cada casilla recibe su probabilidad nominal). A h = 1 es exacta; a h > 1 las "
@@ -168,9 +169,9 @@ def seccion_pit(res, mejor: dict[int, str], dir_figs: Path, rel_figs: str) -> li
             a.set_xlabel("casilla (cola inferior → superior)")
         ax[0][0].set_ylabel("frecuencia observada / nominal")
         fig.tight_layout()
-        fig.savefig(dir_figs / "fase2_pit.png", dpi=120)
+        fig.savefig(dir_figs / nombre_fig, dpi=120)
         plt.close(fig)
-        L += [f"![PIT por casillas]({rel_figs}/fase2_pit.png)", "",
+        L += [f"![PIT por casillas]({rel_figs}/{nombre_fig})", "",
               "Figura: frecuencia observada sobre nominal por casilla, para el modelo de menor CRPS "
               "en cada horizonte. 1 = calibrado; barras extremas > 1 = colas subcubiertas.", ""]
     return L
@@ -274,12 +275,13 @@ def seccion_veredicto(v: pd.DataFrame) -> list[str]:
 
 
 def secciones(res, meta, dir_cola: Path, res_largo: dict | None, dir_figs: Path,
-              rel_figs: str = "figs", reps_mcs: int = REPS_MCS, salida_mcs: dict | None = None) -> list[str]:
+              rel_figs: str = "figs", reps_mcs: int = REPS_MCS, salida_mcs: dict | None = None,
+              nombre_fig: str = "fase2_pit.png") -> list[str]:
     mcs, mejor, tablas = seccion_mcs(res, reps_mcs)
     if salida_mcs is not None:
         salida_mcs.update(tablas)
     L = mcs + seccion_basilea(res) + seccion_es(res, meta, dir_cola)
-    L += seccion_pit(res, mejor, dir_figs, rel_figs) + seccion_direccion(res)
+    L += seccion_pit(res, mejor, dir_figs, rel_figs, nombre_fig) + seccion_direccion(res)
     if res_largo:
         L += seccion_largos(res_largo)
     return L

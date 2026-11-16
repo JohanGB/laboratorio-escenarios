@@ -138,3 +138,26 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
   que el autor lo confirme en las preguntas del prerregistro (F4).
 - **Fichas**: `lightgbm_cuantiles` (único que sobrevive) y `bootstrap_est_filtrado`. La segunda
   no sobrevive: se escribe porque es el motor del caso y sus límites deben quedar a la vista.
+
+## 16-nov-2026 · F4 (prerregistro y código de la prueba final)
+- **Candado en el cargador (R3).** `cargar_prueba_final` es la única función que entrega datos
+  ≥ 2020 y antes verifica contra `docs/prerregistro.md` los hashes de `src/**/*.py`, de los tres
+  CSV que usan los modelos y del entorno (versiones de Python y bibliotecas numéricas).
+  Descartado: verificar solo en el comando (cualquier script podría saltárselo) y solo `trm.csv`
+  (LightGBM y la regresión usan las series externas).
+- **Corrida única**: `runs/prueba_final/HECHO.json` impide repetir; no existe `--forzar`. Una
+  corrida interrumpida se reanuda (los modelos son deterministas).
+- **Familia confirmatoria: una prueba por horizonte** (campeón del MCS de desarrollo contra la
+  línea base de desarrollo; LightGBM a 1, EWMA a 5/21/63), DM unilateral con Holm entre las
+  cuatro. Descartados: (a) solo h = 1 (deja tres horizontes sin criterio de éxito, que F4 pide);
+  (b) exigir además estar en el MCS de la prueba final (con ≈ 27 ventanas a h = 63 casi nunca
+  excluye a nadie; el MCS queda como descriptivo). Costo asumido: Holm multiplica por 4 el p de h = 1.
+- **El motor del caso no se cambia a la vista de la prueba**: se publica su cobertura con n
+  efectivo y, si 0,95 queda fuera del intervalo, el caso lo dice. Descartado: «si falla, otro
+  motor» (sería elegir con la prueba final).
+- **Lista cerrada = los 17 + 15 del catálogo**: todos cumplen la regla de C1.
+- **Borrador, no prerregistro**: el texto vive en `docs/prerregistro_borrador.md` hasta que el autor
+  responda las preguntas; con ese nombre el comando no corre. Al cerrar: renombrar, pegar la
+  salida de `final --hashes` y commit `prerregistro prueba final`.
+- `backtest/ejecucion.py`: la ejecución de un modelo salió de `__main__` para que desarrollo y
+  prueba final usen el mismo código. El reporte final no incluye veredicto ni conclusiones libres.
