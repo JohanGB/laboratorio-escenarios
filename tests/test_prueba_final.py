@@ -88,11 +88,13 @@ def _raiz_sintetica(tmp: Path, con_prerregistro: bool = True, sellar: bool = Tru
     return tmp
 
 
-def _escribir_prerregistro(raiz: Path, hashes: dict) -> None:
+def _escribir_prerregistro(raiz: Path, hashes: dict, adendas: dict[int, str] | None = None) -> None:
+    """`adendas`: número → cuerpo de su sección «## N. Adenda N» (al final, como en el real)."""
     (raiz / "docs").mkdir(exist_ok=True)
+    extra = "".join(f"\n## {9 + k}. Adenda {k}\n\n{cuerpo}\n" for k, cuerpo in (adendas or {}).items())
     (raiz / final.PRERREGISTRO).write_text(
-        "# Prerregistro\n\ntexto\n\n" + "\n".join(f"- `{k}`: `{v}`" for k, v in hashes.items()) + "\n",
-        encoding="utf-8")
+        "# Prerregistro\n\ntexto\n\n" + "\n".join(f"- `{k}`: `{v}`" for k, v in hashes.items()) + "\n"
+        + extra, encoding="utf-8")
 
 
 # ---- hash del código ------------------------------------------------------------------------------
@@ -444,7 +446,8 @@ def test_una_corrida_interrumpida_deja_rastro_y_al_reanudar_no_reusa_resultados_
     # Adenda: se corrige el programa (otro hash) y el prerregistro lleva el hash nuevo.
     original = _git(raiz, "rev-parse", final.ETIQUETA)
     (src / "b.py").write_bytes(b"y = 3\n")
-    _escribir_prerregistro(raiz, final.hashes_actuales(raiz, src))
+    _escribir_prerregistro(raiz, final.hashes_actuales(raiz, src),
+                           {1: f"Original `{h0}`; nuevo `{final.hash_codigo(src)}`."})
     _git(raiz, "add", "-A"); _git(raiz, "commit", "-q", "-m", "adenda 1")
     commit = _git(raiz, "rev-parse", "HEAD")
     h1 = final.hash_codigo(src)
@@ -612,3 +615,95 @@ def test_main_final_verificar_no_corre_nada(tmp_path, monkeypatch, capsys):
     salida = capsys.readouterr().out
     assert final.leer_prerregistro(raiz / final.PRERREGISTRO) == dict(final._CLAVE.findall(salida))
     assert not (raiz / "runs").exists()
+
+
+# ---- O4, adenda 1: líneas de hash editadas y reanudación solo con adenda que liste los hashes -----
+def test_el_candado_verifica_contra_la_adenda_mas_reciente_con_las_lineas_de_hash_editadas(tmp_path):
+    raiz = _raiz_sintetica(tmp_path)
+    src = raiz / SRC
+    viejos = final.hashes_actuales(raiz, src)
+    (src / "b.py").write_bytes(b"y = 3\n")                       # corrección del programa
+    nuevos = final.hashes_actuales(raiz, src)
+    assert nuevos["hash_codigo"] != viejos["hash_codigo"]
+    with pytest.raises(RuntimeError, match="los hashes no coinciden"):
+        final.verificar_prerregistro(raiz, src)
+    # Se editan las líneas de hash (sin claves repetidas); el original solo se cita en la adenda.
+    _escribir_prerregistro(raiz, nuevos, {1: f"`hash_codigo` original `{viejos['hash_codigo']}`; "
+                                             f"nuevo `{nuevos['hash_codigo']}`."})
+    assert final.leer_prerregistro(raiz / final.PRERREGISTRO) == nuevos
+    with pytest.raises(RuntimeError, match="no coincide"):         # sin commit ni etiqueta nueva
+        final.verificar_prerregistro(raiz, src)
+    _git(raiz, "add", "-A"); _git(raiz, "commit", "-q", "-m", "adenda 1")
+    with pytest.raises(RuntimeError, match="no coincide"):         # commit sin etiqueta: tampoco
+        final.verificar_prerregistro(raiz, src)
+    _git(raiz, "tag", "prerregistro-adenda-1")
+    assert final.verificar_prerregistro(raiz, src) == nuevos
+    assert final.etiqueta_vigente(raiz)["etiqueta"] == "prerregistro-adenda-1"
+    original = _git(raiz, "show", f"{final.ETIQUETA}:{final.PRERREGISTRO.as_posix()}")
+    assert viejos["hash_codigo"] in original and nuevos["hash_codigo"] not in original
+    (src / "b.py").write_bytes(b"y = 2\n")                       # volver al código viejo: no vale
+    with pytest.raises(RuntimeError, match="los hashes no coinciden"):
+        final.verificar_prerregistro(raiz, src)
+
+
+def test_reanudar_con_hashes_nuevos_exige_una_adenda_que_los_liste(tmp_path, monkeypatch, capsys):
+    raiz = _raiz_sintetica(tmp_path)
+    src, d, nombre = raiz / SRC, raiz / final.SALIDA_FINAL, "caminata_aleatoria"
+
+    def revienta():
+        raise ZeroDivisionError("error de programa simulado")
+
+    with pytest.raises(ZeroDivisionError):
+        final.correr_final(raiz, src, {nombre: CAT[nombre], "roto": (revienta, 21)}, {}, CONF)
+    h0 = final.hash_codigo(src)
+    (src / "b.py").write_bytes(b"y = 3\n")
+    h1 = final.hash_codigo(src)
+    cuerpos: dict[int, str] = {}
+
+    def adenda(cuerpo: str) -> None:
+        cuerpos[len(cuerpos) + 1] = cuerpo
+        _escribir_prerregistro(raiz, final.hashes_actuales(raiz, src), cuerpos)
+        _git(raiz, "add", "-A"); _git(raiz, "commit", "-q", "-m", f"adenda {len(cuerpos)}")
+        _git(raiz, "tag", f"prerregistro-adenda-{len(cuerpos)}")
+
+    def intento():
+        return final.correr_final(raiz, src, {nombre: CAT[nombre]}, {}, CONF)
+
+    capsys.readouterr()
+    adenda("Corrección del programa, sin escribir los hashes.")     # 1: la adenda no los lista
+    with pytest.raises(RuntimeError, match="no lista en la sección «Adenda 1».*hash_codigo"):
+        intento()
+    cuerpos[1] += f" (nuevo `{h1}`)"                                # 2: el nuevo solo aparece en la
+    adenda(f"Otra corrección; el hash anterior era `{h0}`.")        #    sección 1, no en la vigente
+    assert h1 in (raiz / final.PRERREGISTRO).read_text(encoding="utf-8")
+    with pytest.raises(RuntimeError, match="no lista en la sección «Adenda 2»"):
+        intento()
+    ini = json.loads((d / "INICIADA.json").read_text(encoding="utf-8"))
+    assert ini["reanudaciones"] == [] and capsys.readouterr().out == ""
+    assert json.loads((d / f"{nombre}.json").read_text(encoding="utf-8"))["hash_codigo"] == h0
+
+    def generar_falso(raiz, confirmatorias=None):
+        salida = Path(raiz) / final.REPORTE_FINAL
+        salida.parent.mkdir(parents=True, exist_ok=True)
+        salida.write_bytes(b"reporte de mentira\n")
+        return salida
+
+    monkeypatch.setattr("laboratorio.reportes.prueba_final.generar", generar_falso)
+    adenda(f"Corrección. `hash_codigo` original `{h0}`, nuevo `{h1}`.")   # 3: la que vale
+    intento()
+    fin = json.loads((d / "INICIADA.json").read_text(encoding="utf-8"))
+    assert [(r["etiqueta"], r["hash_codigo"]) for r in fin["reanudaciones"]] == [("prerregistro-adenda-3", h1)]
+    assert json.loads((d / f"{nombre}.json").read_text(encoding="utf-8"))["hash_codigo"] == h1
+
+
+def test_exigir_adenda_sin_cambios_no_pide_nada_y_con_cambios_pide_una_adenda_nueva(tmp_path):
+    ant = {"hash_codigo": "a" * 64, "etiqueta": "prerregistro-final"}
+    final.exigir_adenda(tmp_path, ant, {"hash_codigo": "a" * 64}, {"etiqueta": "prerregistro-final"})
+    for etiqueta in ("prerregistro-final", "otra-cosa"):
+        with pytest.raises(RuntimeError, match="sin una adenda nueva"):
+            final.exigir_adenda(tmp_path, ant, {"hash_codigo": "b" * 64}, {"etiqueta": etiqueta})
+    ant1 = {"hash_codigo": "b" * 64, "etiqueta": "prerregistro-adenda-1"}
+    with pytest.raises(RuntimeError, match="sin una adenda nueva"):   # misma adenda, otro código
+        final.exigir_adenda(tmp_path, ant1, {"hash_codigo": "c" * 64}, {"etiqueta": "prerregistro-adenda-1"})
+    assert final.seccion_adenda("## 12. Adenda 1 (x)\n\nhola `z`\n\n## 13. Otra\n\nadiós\n", 1) == "\nhola `z`\n\n"
+    assert final.seccion_adenda("## 12. Adenda 12\n\nx\n", 1) is None

@@ -17,6 +17,8 @@ Candados (R3):
 - Al empezar se escribe `runs/prueba_final/INICIADA.json` (hora, hashes, commits) ANTES de leer
   los datos. Una corrida interrumpida se puede reanudar: cada reanudación queda anotada ahí y un
   resultado en caché solo vale si se produjo con los mismos hashes; si no, ese modelo se repite.
+  Reanudar con hashes distintos de los de la entrada anterior exige una adenda nueva cuya sección
+  del prerregistro escriba esos hashes (`exigir_adenda`).
 - La corrida completa deja `runs/prueba_final/HECHO.json`, con el SHA-256 de cada resultado; con
   ese archivo el comando se niega a correr otra vez. No existe opción para forzar. (Borrar el
   archivo a mano reabre el comando: es una puerta declarada en el prerregistro, no cerrada aquí.)
@@ -257,6 +259,32 @@ def _ahora() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
+def seccion_adenda(texto: str, numero: int) -> str | None:
+    """Cuerpo de la sección «## … Adenda N …» del prerregistro (hasta el siguiente «## »), o None."""
+    m = re.search(rf"^## [^\n]*\bAdenda {numero}\b[^\n]*\n(.*?)(?=^## |\Z)", texto, re.M | re.S)
+    return m.group(1) if m else None
+
+
+def exigir_adenda(raiz: Path, anterior: dict, hashes: dict[str, str], commits: dict[str, str]) -> None:
+    """Reanudar con hashes distintos de la entrada anterior de INICIADA.json solo vale si la
+    etiqueta vigente es una adenda nueva y su sección en el prerregistro («## … Adenda N …»)
+    escribe cada hash que cambió. Si no, no se corre nada (se llama antes de leer datos)."""
+    cambiados = {k: v for k, v in hashes.items() if anterior.get(k) != v}
+    if not cambiados:
+        return
+    etiqueta = commits.get("etiqueta", "")
+    if not etiqueta.startswith(PREFIJO_ADENDA) or etiqueta == anterior.get("etiqueta"):
+        raise RuntimeError(f"reanudación con hashes nuevos ({', '.join(cambiados)}) sin una adenda "
+                           f"nueva: hace falta una etiqueta {PREFIJO_ADENDA}N posterior a "
+                           f"«{anterior.get('etiqueta')}»; NO se corre nada")
+    numero = int(etiqueta[len(PREFIJO_ADENDA):])
+    cuerpo = seccion_adenda((raiz / PRERREGISTRO).read_text(encoding="utf-8"), numero)
+    faltan = [k for k, v in cambiados.items() if cuerpo is None or v not in cuerpo]
+    if faltan:
+        raise RuntimeError(f"el prerregistro no lista en la sección «Adenda {numero}» los hashes "
+                           f"nuevos de {', '.join(faltan)}; NO se corre nada")
+
+
 def registrar_inicio(raiz: Path, hashes: dict[str, str], commits: dict[str, str]) -> dict:
     """Escribe (o amplía) runs/prueba_final/INICIADA.json: la prueba final quedó abierta.
 
@@ -278,6 +306,7 @@ def registrar_inicio(raiz: Path, hashes: dict[str, str], commits: dict[str, str]
             raise RuntimeError(f"la etiqueta «{ETIQUETA}» se movió desde que se abrió la prueba "
                                f"(estaba en {reg.get('commit_etiqueta_original')}): la original no "
                                f"se mueve; una adenda es una etiqueta nueva {PREFIJO_ADENDA}N")
+        exigir_adenda(raiz, (reg.get("reanudaciones") or [reg])[-1], hashes, commits)
         reg.setdefault("reanudaciones", []).append({"hora": _ahora(), **entrada})
     else:
         archivo.parent.mkdir(parents=True, exist_ok=True)

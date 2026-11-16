@@ -51,6 +51,10 @@ class FHS(Pronosticador):
     def reajustes(self):
         return self._gjr.reajustes if self._gjr else None
 
+    @property
+    def primer_ajuste(self):
+        return self._gjr.primer_ajuste if self._gjr else None
+
     def parametros(self):
         d = {"filtro": self.filtro, "sims": self.sims, "semilla": self.semilla,
              "residuos": "empíricos, toda la historia, sin renormalizar", "ventana": "expansiva"}

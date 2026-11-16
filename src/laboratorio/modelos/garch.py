@@ -6,6 +6,9 @@ GJR-GARCH(1,1,1) y EGARCH(1,1,1).
   los parámetros del reajuste anterior; si eso falla se reintenta con los valores iniciales de
   `arch` (arranque en frío). Si ambos fallan o dan parámetros inválidos se conservan los del
   reajuste anterior y se cuenta en `fallos` (nunca se inventan); `causas` dice por qué.
+  Primer ajuste (sin parámetros previos; adenda 1 del prerregistro): frío de `arch`, luego la
+  lista cerrada `INICIOS_VOL`, luego lo mismo recortando hasta `RECORTE_MAX` observaciones del
+  final; si nada converge, error. `primer_ajuste` anota qué se usó (None si bastó `arch`).
 - Pronóstico (`pronosticar`): la recursión de varianza con parámetros fijos y la simulación de
   trayectorias son propias (numpy), semillas por (origen) → resultado determinista y
   verificablemente sin fuga: el estado en el origen o solo usa r[1..o].
@@ -132,6 +135,39 @@ def simular_acumulados(v1: float, tipo: str, p: dict, hmax: int, z: np.ndarray) 
 DISTS = ("t", "skewt")
 ARRANQUES = ("caliente", "frio")
 TOL_PERSISTENCIA = 1e-4          # antes de O1: 1e-6
+
+# O4, adenda 1 del prerregistro: PRIMER ajuste de cada instancia (sin parámetros previos).
+# Si el arranque en frío de `arch` no converge, se prueban estos vectores iniciales, en este orden
+# (rendimientos en %); el primero que converja y sea válido gana. Si ninguno sirve, se repite todo
+# quitando la última observación, una a la vez, hasta RECORTE_MAX (nunca se usa un dato posterior).
+# Si aun así nada converge: RuntimeError. Los ajustes siguientes no usan esta regla.
+# Orden de los parámetros de volatilidad: el de `arch` (ω, α, [γ,] β).
+INICIOS_VOL = {
+    "GARCH": ((0.01, 0.05, 0.90), (0.005, 0.10, 0.89), (0.02, 0.03, 0.94)),
+    "GJR": ((0.01, 0.05, 0.05, 0.90), (0.005, 0.10, 0.0, 0.89), (0.02, 0.03, 0.03, 0.94)),
+    "EGARCH": ((0.0, 0.10, -0.05, 0.98), (0.0, 0.15, 0.0, 0.95), (0.0, 0.05, -0.02, 0.99)),
+}
+INICIOS_NU = (8.0, 5.0, 10.0)    # ν de cada vector (t y t asimétrica)
+INICIO_LAMBDA = 0.0              # λ de la t asimétrica, igual en los tres
+RECORTE_MAX = 21                 # un paso de reajuste
+
+
+def inicios_fijos(tipo: str, dist: str) -> list[np.ndarray]:
+    """Lista cerrada de vectores iniciales (orden de `arch`) para el primer ajuste."""
+    extra = lambda nu: (nu, INICIO_LAMBDA) if dist == "skewt" else (nu,)
+    return [np.array(v + extra(nu)) for v, nu in zip(INICIOS_VOL[tipo], INICIOS_NU)]
+
+
+def tabla_inicios() -> str:
+    """La tabla de la adenda 1, generada del código (hay prueba de que es la del prerregistro)."""
+    num = lambda x: f"{x:g}".replace(".", ",")
+    filas = ["| tipo | vector | ω | α | γ | β | ν | λ (solo skewt) |", "|---|---|---|---|---|---|---|---|"]
+    for tipo, vectores in INICIOS_VOL.items():
+        for k, (v, nu) in enumerate(zip(vectores, INICIOS_NU), 1):
+            w, a, *g, b = v
+            filas.append(f"| {tipo} | V{k} | {num(w)} | {num(a)} | {num(g[0]) if g else '—'} | "
+                         f"{num(b)} | {num(nu)} | {num(INICIO_LAMBDA)} |")
+    return "\n".join(filas)
 # nombre de arch ↔ nombre propio
 _NOMBRES = {"omega": "omega", "alpha[1]": "alpha", "gamma[1]": "gamma", "beta[1]": "beta",
             "nu": "nu", "eta": "nu", "lambda": "lam"}
@@ -157,6 +193,7 @@ class GarchT(Pronosticador):
         self.rescates = 0           # el arranque en caliente falló pero el frío sirvió
         self.causas: dict[str, int] = {}
         self.historial: list[dict] = []
+        self.primer_ajuste: dict | None = None   # solo si el primer ajuste necesitó la regla de la adenda 1
 
     def parametros(self):
         return {"tipo": self.tipo, "dist": self.dist, "media": "cero", "sims": self.sims,
@@ -216,7 +253,26 @@ class GarchT(Pronosticador):
             if causa:
                 self.rescates += 1
             return p
+        if self.params is None:                  # primer ajuste: lista cerrada (adenda 1)
+            for k, inicio in enumerate(inicios_fijos(self.tipo, self.dist), 1):
+                p, _ = self._intento(am, inicio)
+                if p is not None:
+                    self._inicio_usado = k
+                    return p
         self._ultima_causa = causa_frio
+        return None
+
+    def _primer_ajuste(self, eps: np.ndarray) -> dict | None:
+        """Adenda 1: arranque en frío de `arch`, luego la lista cerrada; si nada converge, lo
+        mismo quitando 1..RECORTE_MAX observaciones del final (solo datos anteriores)."""
+        for recorte in range(min(RECORTE_MAX, len(eps) - 250) + 1):
+            self._inicio_usado = 0
+            p = self._estimar(eps if recorte == 0 else eps[:-recorte])
+            if p is not None:
+                if recorte or self._inicio_usado:
+                    self.primer_ajuste = {"inicio": "arch" if self._inicio_usado == 0
+                                          else f"V{self._inicio_usado}", "recorte": recorte}
+                return p
         return None
 
     def ajustar(self, vista) -> None:
@@ -225,12 +281,13 @@ class GarchT(Pronosticador):
             raise ValueError("historia insuficiente para estimar GARCH")
         self.reajustes += 1
         self._ultima_causa = "desconocida"
-        p = self._estimar(eps)
+        p = self._estimar(eps) if self.params is not None else self._primer_ajuste(eps)
         if p is None:
             self.fallos += 1
             self.causas[self._ultima_causa] = self.causas.get(self._ultima_causa, 0) + 1
             if self.params is None:
-                raise RuntimeError("la primera estimación GARCH no convergió")
+                raise RuntimeError("la primera estimación GARCH no convergió con ningún inicio de "
+                                   f"la lista cerrada ni recortando hasta {RECORTE_MAX} observaciones")
             self.historial.append({"t": vista.n - 1, "fallo": True})
             return
         self.params = p

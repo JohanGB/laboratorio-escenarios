@@ -234,3 +234,95 @@ def test_fallo_registra_la_causa(datos, monkeypatch):
     monkeypatch.setattr(GarchT, "_intento", lambda self, am, inicio: (None, "explosivo"))
     m.ajustar(datos.hasta(1800))
     assert m.causas == {"explosivo": 1} and m.historial[-1]["fallo"]
+
+
+# ---- O4, adenda 1: primer ajuste con lista cerrada de inicios y recorte ------------------------
+from pathlib import Path  # noqa: E402
+
+from laboratorio.modelos.garch import (INICIOS_NU, INICIOS_VOL, RECORTE_MAX,  # noqa: E402
+                                       inicios_fijos, tabla_inicios)
+
+_ORDEN = {"GARCH": ("omega", "alpha", "beta"), "GJR": ("omega", "alpha", "gamma", "beta"),
+          "EGARCH": ("omega", "alpha", "gamma", "beta")}
+
+
+@pytest.mark.parametrize("tipo", ["GARCH", "GJR", "EGARCH"])
+@pytest.mark.parametrize("dist", ["t", "skewt"])
+def test_los_vectores_iniciales_son_estacionarios_y_tienen_el_orden_de_arch(tipo, dist, datos):
+    m = GarchT(tipo, dist=dist)
+    am = m._modelo(datos.r[1:500] * 100)
+    nombres = am.volatility.parameter_names() + am.distribution.parameter_names()
+    vectores = inicios_fijos(tipo, dist)
+    assert len(vectores) == 3 == len(INICIOS_NU)
+    for x in vectores:
+        assert len(x) == len(nombres)
+        p = dict(zip(_ORDEN[tipo], x[: len(_ORDEN[tipo])]))
+        assert persistencia(tipo, p) < 1                      # persistencia < 1 en los tres
+        if tipo != "EGARCH":
+            assert p["omega"] > 0 and p["alpha"] >= 0 and p["beta"] >= 0
+        assert 2.1 < x[len(_ORDEN[tipo])] < 200                # ν dentro de los límites de _validar
+        if dist == "skewt":
+            assert x[-1] == 0.0
+
+
+def test_la_tabla_de_la_adenda_es_la_del_codigo():
+    texto = (Path(__file__).resolve().parents[1] / "docs" / "prerregistro.md").read_text(encoding="utf-8")
+    assert tabla_inicios() in texto
+    assert len(tabla_inicios().splitlines()) == 2 + sum(len(v) for v in INICIOS_VOL.values())
+
+
+def test_primer_ajuste_usa_la_lista_cerrada_si_falla_el_frio_de_arch(datos, monkeypatch):
+    original = GarchT._intento
+    llamadas = []
+
+    def espia(self, am, inicio):
+        llamadas.append(None if inicio is None else inicio.copy())
+        if inicio is None or np.allclose(inicio, inicios_fijos("GJR", "t")[0]):
+            return None, "no_convergio"                       # falla arch y V1 → debe servir V2
+        return original(self, am, inicio)
+    monkeypatch.setattr(GarchT, "_intento", espia)
+    m = GarchT("GJR"); m.ajustar(datos.hasta(1500))
+    assert llamadas[0] is None and len(llamadas) == 3
+    assert np.allclose(llamadas[2], inicios_fijos("GJR", "t")[1])
+    assert m.primer_ajuste == {"inicio": "V2", "recorte": 0} and m.fallos == 0
+
+
+def test_cada_vector_de_la_lista_llega_al_mismo_optimo_que_arch(datos):
+    for tipo in ("GARCH", "GJR"):
+        m = GarchT(tipo)
+        am = m._modelo(datos.hasta(2000).r[1:] * 100)
+        ref, _ = m._intento(am, None)
+        for x in inicios_fijos(tipo, "t"):
+            p, causa = m._intento(am, x)
+            assert p is not None, (tipo, causa)
+            for k in ref:
+                assert p[k] == pytest.approx(ref[k], rel=2e-2, abs=2e-3), (tipo, k)
+
+
+def test_primer_ajuste_recorta_solo_hacia_atras_y_si_nada_converge_falla(datos, monkeypatch):
+    n = len(datos.hasta(1500).r) - 1
+    largos = []
+    original = GarchT._estimar
+
+    def estimar(self, eps):
+        largos.append(len(eps))
+        return original(self, eps) if len(eps) == n - 3 else None
+    monkeypatch.setattr(GarchT, "_estimar", estimar)
+    m = GarchT("GARCH"); m.ajustar(datos.hasta(1500))
+    assert largos == [n, n - 1, n - 2, n - 3]               # nunca más largo que la muestra
+    assert m.primer_ajuste == {"inicio": "arch", "recorte": 3} and m.params is not None
+    # Los ajustes siguientes siguen la regla prerregistrada: no hay lista ni recorte.
+    monkeypatch.setattr(GarchT, "_estimar", lambda self, eps: largos.append(len(eps)))
+    largos.clear(); antes = dict(m.params)
+    m.ajustar(datos.hasta(1800))
+    assert largos == [1800] and m.params == antes and m.fallos == 1
+    # Si nada converge en el primer ajuste: error, tras exactamente RECORTE_MAX recortes.
+    largos.clear()
+    with pytest.raises(RuntimeError, match="ningún inicio de la lista cerrada"):
+        GarchT("GARCH").ajustar(datos.hasta(1500))
+    assert largos == [n - k for k in range(RECORTE_MAX + 1)]
+
+
+def test_sin_problemas_el_primer_ajuste_es_el_de_siempre(datos):
+    m = GarchT("GJR", dist="skewt"); m.ajustar(datos.hasta(1500))
+    assert m.primer_ajuste is None

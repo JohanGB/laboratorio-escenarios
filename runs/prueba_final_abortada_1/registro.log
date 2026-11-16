@@ -1,0 +1,39 @@
+prerregistro verificado:
+  hash_codigo: a3c3ea0da8b84ba0da40297dd3e060ee85fcf52eee1cb43db5ed3a02243301c4
+  hash_entorno: fd4c1314e5cc3e57
+  hash_trm_csv: 641393c5df0c869b
+  hash_externas_diario_csv: c3cd56acdfdc01da
+  hash_tasas_diarias_csv: 5557495a88e94063
+  entorno: python 3.11.9, numpy 2.4.1, pandas 3.0.0, scipy 1.17.0, statsmodels 0.15.0, arch 9.0.0, lightgbm 4.7.0
+  commit etiquetado «prerregistro-final»: 2656528459f3f3d099ddcba6f8081e1c1a381bfd
+caminata_aleatoria: listo
+sim_hist_756: listo
+sim_hist_pond: listo
+ewma_0.94: listo
+garch_t: listo
+gjr_t: listo
+egarch_t: listo
+reg_cuantiles: listo
+lightgbm_cuantiles: listo
+bootstrap_est: listo
+bootstrap_est_filtrado: listo
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\johan\Downloads\Life\IndeProjex\laboratorio-escenarios\src\laboratorio\backtest\__main__.py", line 55, in <module>
+    main()
+  File "C:\Users\johan\Downloads\Life\IndeProjex\laboratorio-escenarios\src\laboratorio\backtest\__main__.py", line 48, in main
+    main_final(raiz, solo_verificar=a.verificar, solo_hashes=a.hashes)
+  File "C:\Users\johan\Downloads\Life\IndeProjex\laboratorio-escenarios\src\laboratorio\backtest\final.py", line 359, in main_final
+    print(correr_final(raiz))
+          ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\johan\Downloads\Life\IndeProjex\laboratorio-escenarios\src\laboratorio\backtest\final.py", line 323, in correr_final
+    correr_uno(nombre, cat, vista, raiz / SALIDA_FINAL, raiz, primero=primero, extra=extra,
+  File "C:\Users\johan\Downloads\Life\IndeProjex\laboratorio-escenarios\src\laboratorio\backtest\ejecucion.py", line 69, in correr_uno
+    df, cola = correr_con_cola(m, vista, primero=primero, paso=paso, con_cola=con_cola)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\johan\Downloads\Life\IndeProjex\laboratorio-escenarios\src\laboratorio\backtest\corredor.py", line 73, in correr_con_cola
+    modelo.ajustar(vista.hasta(b.reajuste))
+  File "C:\Users\johan\Downloads\Life\IndeProjex\laboratorio-escenarios\src\laboratorio\modelos\garch.py", line 233, in ajustar
+    raise RuntimeError("la primera estimación GARCH no convergió")
+RuntimeError: la primera estimación GARCH no convergió

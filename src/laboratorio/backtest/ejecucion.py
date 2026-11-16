@@ -82,6 +82,8 @@ def correr_uno(nombre: str, catalogo: dict, vista: Vista, out: Path, raiz: Path,
             "inicio_desarrollo": INICIO_DESARROLLO, "corte_prueba_final": INICIO_PRUEBA_FINAL,
             "ultimo_dato_cargado": str(vista.fechas.max())[:10],
             "hash_trm_csv": hash_archivo(raiz / "data/processed/trm.csv"), **(extra or {})}
+    if getattr(m, "primer_ajuste", None):     # adenda 1: solo si el primer ajuste GARCH necesitó la regla
+        info["primer_ajuste"] = m.primer_ajuste
     meta.write_text(json.dumps(info, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
     if silencioso:
         print(f"{nombre}: listo", flush=True)
