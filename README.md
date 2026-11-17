@@ -24,7 +24,9 @@ información. Luego se corrió **una sola vez** una prueba final prerregistrada 
 - Solo a un día hay un modelo útil, y sus colas quedan cortas: sirve como pronóstico central,
   no como medida de riesgo extremo.
 - A horizontes largos **ningún modelo supera a una línea base simple** y los rangos del motor
-  probablemente son estrechos (cobertura nominal 95 %, observada 0,90 y 0,88 en desarrollo).
+  pueden ser estrechos: en desarrollo la cobertura del 95 % fue 0,90 y 0,88; en la prueba final
+  fue 0,992 y 0,932, pero con solo 11 y 5 ventanas independientes esa cifra no permite concluir
+  nada. Se publican ambas.
 - Los datos de la prueba final no son «nunca vistos»: el análisis exploratorio y el caso los
   mostraron antes del prerregistro. Está declarado en el reporte.
 
@@ -56,9 +58,13 @@ el reporte las presenta juntas. Se publicó el hallazgo en vez de esconderlo.
 pip install -e ".[dev]"
 pytest -q
 $env:PYTHONPATH = "src"
-python -m laboratorio.backtest final --verificar          # comprueba hashes y etiquetas
 python -m laboratorio.motor compra_dolares --trayectorias 10000 --semilla 20240501
 ```
+
+**Reproducir la prueba final.** La verificación de hashes (`python -m laboratorio.backtest final
+--verificar`) solo pasa con el código tal como estaba al correrla. Hazlo en una copia limpia de la
+etiqueta: `git checkout prerregistro-adenda-1`. En la rama actual falla a propósito, porque el
+motor del caso cambió después de la prueba (ver `docs/decisiones.md`).
 
 Algunas pruebas se saltan si falta `data/processed` (se reconstruye desde `data/raw`, que está
 versionado). Los resultados de la prueba final (`runs/prueba_final*/`, archivos `.csv.gz`) no
