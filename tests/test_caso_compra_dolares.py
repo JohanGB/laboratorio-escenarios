@@ -222,6 +222,51 @@ def test_12_sin_archivo_de_respaldo_todo_queda_sin_respaldo_fuera_de_muestra(cor
     assert md.count("sin respaldo fuera de muestra") >= 6 + 6 + 3
 
 
+def test_12b_analisis_posterior_solo_flotacion_va_al_lado_del_motor_y_explica_la_causa(proyecto, corrida):
+    ficha, ruta_ficha, ruta_rep = corrida
+    md = ruta_rep.read_text(encoding="utf-8")
+    res = json.loads(ruta_ficha.with_name("resultado.json").read_text(encoding="utf-8"))
+    titulo = "### Análisis posterior (no confirmatorio): el mismo bootstrap solo con la flotación"
+    assert titulo in md.split("## 4. Monte Carlo")[1].split("\n## ")[0]            # dentro de la sección 4
+    assert "No reemplaza al motor, que sigue siendo el principal" in md
+    assert "bootstrap_est_filtrado remuestreando solo desde" in ficha.parametros["analisis_posterior"]
+    bloque = md.split(titulo)[1].split("\n## ")[0]
+    for etiqueta in ("Mediana de la TRM a 252 días", "Probabilidad de superar el presupuesto"):
+        celdas = _fila(md, titulo,etiqueta)
+        assert len(celdas) == 4 and all("`#" in c for c in celdas[1:3])            # motor | solo flotación
+        assert celdas[3] == "sin respaldo fuera de muestra"
+    # la columna del motor es la misma cifra de la tabla principal (mismo hash)
+    principal = _fila(md, "## 4. Monte Carlo", "Probabilidad de superar el presupuesto")[1]
+    assert _fila(md, titulo,"Probabilidad de superar el presupuesto")[1] == principal
+    datos, reg = _conjunto_y_datos(proyecto)
+    assert res["flot.n_muestra"] == int((datos.trm.index >= "1999-09-25").sum())
+    assert res["flot.deriva_252"] < res["mc.deriva_252"]    # sin la banda, menos deriva
+    assert res["flot.deriva_252"] == pytest.approx(100 * (res["flot.med_252"] / res["trm0"] - 1), rel=1e-9)
+    assert 0 <= res["flot.prob_superar"] <= 100 and res["flot.p5"] <= res["flot.p50"] <= res["flot.p95"]
+    # causa: los dos tramos suman toda la serie y la banda entra amplificada al motor
+    assert res["causa.antes.peso"] + res["causa.desde.peso"] == pytest.approx(100)
+    assert res["causa.antes.aporte_z"] + res["causa.desde.aporte_z"] == pytest.approx(res["causa.media_z"])
+    assert res["causa.antes.deriva_anual"] > res["causa.desde.deriva_anual"]
+    assert res["causa.antes.vol_diaria"] < res["causa.desde.vol_diaria"]
+    assert res["causa.antes.factor"] > res["causa.desde.factor"] > 0
+    for tramo in ("Antes del 1999-09-25", "Desde el 1999-09-25"):
+        fila = next(l for l in bloque.splitlines() if l.startswith(f"| {tramo}"))
+        assert fila.count("`#") == 8                       # la fecha y las siete cifras, con hash
+    # la frase inicial da las tres probabilidades y dice de dónde viene la diferencia
+    inicio = md.split("## Planteamiento")[0]
+    assert "**Antes de leer las cifras.**" in inicio and "deriva de la TRM que cada método supone" in inicio
+    for k in ("mc.prob_superar", "flot.prob_superar", "dist.prob_superar"):
+        assert f"{res[k]:.1f} %".replace(".", ",") in inicio
+    assert "Ninguna de las tres cifras tiene respaldo fuera de muestra" in inicio
+    assert "Es un error\nestándar, no una cota" in md and "a lo sumo" not in md   # I4
+    # linaje: también las cifras del Monte Carlo y del análisis posterior llegan a datos y supuestos
+    _, K = caso.calcular(datos, reg.conjunto(ficha.pins_supuestos), {"trayectorias": 50, "semilla": 1})
+    nuevas = [k for k in K if k.startswith(("mc.", "sens.", "flot.", "causa.", "abanico."))]
+    assert len(nuevas) > 60
+    for k in nuevas:
+        assert all(h.origen in ("dato", "supuesto") for h in K[k].hojas()), k
+
+
 RESPALDO = {
     "nominal": 0.95, "sha256_hecho": "0" * 64,
     "cobertura": {"bootstrap_est_filtrado": {
@@ -260,6 +305,10 @@ def test_13_con_respaldo_cada_horizonte_cita_su_cobertura_y_la_advertencia_va_si
             assert "fuera del intervalo" in celdas[5]
         else:
             assert celdas[5] == "no hace falta"
+        assert celdas[4].startswith("límites: prueba final")          # la cobertura respalda los límites…
+        assert celdas[4].endswith("Mediana: sin respaldo fuera de muestra")   # …no la mediana (F6)
+    assert "La cobertura respalda los\nlímites de la banda, no la mediana" in md
+    assert "de qué lado de la banda quedó la TRM real" not in md   # este respaldo no trae el análisis posterior
     assert _fila(md, "## 4. Monte Carlo", "Percentil 95")[4] == "sin respaldo fuera de muestra"
     assert "Respaldo de estas cifras: indirecto" in md and "0,990" in md and "0,930" in md   # 126 y 252
     ref = md.split("**Modelo de referencia.**", 1)[1].split("\n\n", 1)[0].replace("\n", " ")
@@ -274,3 +323,44 @@ def test_13_con_respaldo_cada_horizonte_cita_su_cobertura_y_la_advertencia_va_si
         json.dumps({**RESPALDO, "nominal": 0.9}), encoding="utf-8")     # el respaldo es dato de entrada
     with pytest.raises(EntradaCambio, match="datos"):
         caso.reproducir_corrida(ruta_ficha, r)
+
+
+def _asimetria(h, bajo_mediana, ic, bajo_inferior, sobre_superior):
+    campos = lambda p, esperado, lo, hi: {"proporcion": p, "esperado": esperado, "ic_inf": lo,   # noqa: E731
+                                          "ic_sup": hi, "compatible": lo <= esperado <= hi}
+    return {"n": 1500, "n_efectivo": max(1500 // h, 1), "bajo_mediana": campos(bajo_mediana, 0.5, *ic),
+            "bajo_inferior": campos(bajo_inferior, 0.025, 0.0, 0.1),
+            "sobre_superior": campos(sobre_superior, 0.025, 0.0, 0.1)}
+
+
+def test_14_analisis_posterior_de_que_lado_quedo_la_trm_real_con_indicio_en_horizontes_largos(tmp_path, proyecto):
+    r = tmp_path / "p"
+    shutil.copytree(proyecto, r, ignore=shutil.ignore_patterns("supuestos", "runs", "reports"))
+    post = {"titulo": "análisis posterior (no confirmatorio)", "asimetria": {"bootstrap_est_filtrado": {
+        str(h): _asimetria(h, bm, ic, inf, sup) for h, bm, ic, inf, sup in (
+            (1, 0.542, (0.517, 0.567), 0.025, 0.025), (5, 0.48, (0.42, 0.54), 0.02, 0.019),
+            (21, 0.38, (0.27, 0.49), 0.016, 0.016), (63, 0.663, (0.465, 0.851), 0.029, 0.012),
+            (126, 0.71, (0.39, 0.94), 0.007, 0.001), (252, 0.801, (0.284, 0.995), 0.068, 0.0))}}}
+    (r / "data/respaldo").mkdir()
+    (r / "data/respaldo/prueba_final.json").write_text(json.dumps({**RESPALDO, "posterior": post}),
+                                                       encoding="utf-8")
+    _, ruta_ficha, ruta_rep = caso.ejecutar(r, trayectorias=N_MC)
+    md = ruta_rep.read_text(encoding="utf-8")
+    _revisar_hashes(md)
+    titulo = "### Análisis posterior (no confirmatorio): de qué lado de la banda quedó la TRM real"
+    assert titulo in md.split("## 5. Abanico")[1].split("\n## ")[0]                # dentro de la sección 5
+    bloque = md.split(titulo)[1].split("\n## ")[0]
+    assert "no estaba en el prerregistro" in bloque and "no confirma ni rechaza nada" in bloque
+    lectura = {h: _fila(md, titulo,str(h)) for h in (1, 5, 21, 63, 126, 252)}
+    assert all(len(c) == 7 for c in lectura.values())
+    assert "0,542" in lectura[1][1] and "0,517" in lectura[1][2] and "0,567" in lectura[1][2]
+    assert "0,068" in lectura[252][3] and "0,000" in lectura[252][4] and lectura[252][5].startswith("5 ")
+    assert lectura[1][6].endswith("más de lo esperado")                # 0,5 fuera del intervalo, por arriba
+    assert lectura[5][6] == "compatible con una banda bien centrada"
+    assert lectura[21][6].endswith("menos de lo esperado")             # 0,5 fuera, por abajo
+    for h, n in ((63, 23), (126, 11), (252, 5)):                       # pocas ventanas: nunca es prueba
+        assert lectura[h][6].startswith(f"**indicio, no prueba**: solo {n} ")
+    assert "**A 63, 126 y 252 días es un indicio, no una prueba**" in bloque
+    assert "no apunta al mismo lado en todos los horizontes" in bloque  # 5 y 21 quedaron del otro lado
+    ok, _ = caso.reproducir_corrida(ruta_ficha, r)
+    assert ok

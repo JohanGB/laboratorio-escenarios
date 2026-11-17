@@ -1,0 +1,42 @@
+{
+  "caso": "compra_dolares",
+  "commit": "037f784bdbc2036c6f3f6d76b26d6bf0856c5965",
+  "creada_en": "2026-11-17T02:01:32+00:00",
+  "datos": {
+    "processed/trm.csv": "641393c5df0c869b0ad669d933b7196ebc0e402d5ee9727c598ba9c99ab45ee4",
+    "raw/trm_superfinanciera_20261114.csv": "09a5712b75fa9dfd6f660af487357980817c317d902e1c17007337cb25d59730",
+    "respaldo/prueba_final.json": "eabb756d5b59a62401ac22bcc441335e36a6eee618922941fb48c3fdc5c17058"
+  },
+  "entorno": {
+    "numpy": "2.4.1",
+    "pandas": "3.0.0",
+    "plataforma": "Windows-10-10.0.26300-SP0",
+    "python": "3.11.9"
+  },
+  "hash_codigo": "6aed58e0b63462e136dfb0e30e79cc0d2e4f0dfa003d0b8a0a2771f69e397dfb",
+  "hash_datos": "f3d3d8e5e5dc4f8cae9d4c55634f7d42ab09cccc37bb2254bd829804a58076a5",
+  "hash_entrada": "6506dbba326171b63516104206f071188f7f4d1b65634fa69197f91c051381f5",
+  "hash_ficha": "65cbb31f0a6b7af25488134100a7bf586b4950f2a8cfc087596531eb5a26ed89",
+  "hash_resultado": "fd0721b819d7d3d52a3f6515eacbb9b05b3547c834581f0637939f979e2f203e",
+  "hash_supuestos": "e26cfb6730179e94360fdf1f59c77945de48ea6950a79c7d7355c9e4abb2e912",
+  "parametros": {
+    "analisis_posterior": "bootstrap_est_filtrado remuestreando solo desde historica.desde",
+    "modo": "determinista+historica+montecarlo",
+    "motor": "bootstrap_est_filtrado",
+    "sensibilidad": "bootstrap_est",
+    "trayectorias": 10000
+  },
+  "pins_supuestos": {
+    "caso.intervalo_meses": 1,
+    "caso.meta_usd": 1,
+    "caso.n_compras": 1,
+    "caso.presupuesto_margen_pct": 1,
+    "historica.desde": 1,
+    "historica.ventana.2015": 1,
+    "historica.ventana.fin_2022": 1,
+    "trm.deriva_anual_log.base": 1,
+    "trm.deriva_anual_log.estres": 1,
+    "trm.deriva_anual_log.optimista": 1
+  },
+  "semilla": 20240501
+}

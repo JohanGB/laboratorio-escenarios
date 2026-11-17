@@ -218,3 +218,53 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
   con el del prerregistro ni con el de los resultados. El de la prueba final se reproduce con
   `git checkout prerregistro-adenda-1` (y `python -m laboratorio.backtest final --hashes`); la
   prueba no se puede repetir (HECHO.json) y `final --verificar` fallará desde este commit: es lo esperado.
+
+## 16-nov-2026 · F5b (análisis posterior: solo flotación)
+- **Sensibilidad «análisis posterior (no confirmatorio)» al lado del motor**, que sigue siendo el
+  principal. `montecarlo.simular(..., desde=)` remuestrea solo las observaciones desde
+  `historica.desde` (1999-09-25); misma semilla (20240501) y mismas 10.000 trayectorias. No toca
+  `modelos/`, `backtest/`, `evaluacion/` ni `reportes/`.
+- **Solo cambia la muestra.** Bloque, σ̄, ρ y σ del origen son los del motor ajustado con toda la
+  historia. Con 10.000 trayectorias: mediana de la TRM a 252 días +2,3 % (motor +9,2 %) y
+  P(superar presupuesto) **31,5 %** (motor 45,4 %). Descartada: reajustar además bloque, σ̄ y ρ
+  solo con la flotación, que da +2,5 % y **32,8 %**. Motivo de implementar una sola: la primera
+  aísla una causa (la muestra) y la segunda mezcla dos (muestra y escala de volatilidad); la
+  diferencia entre ambas (1,3 puntos) es pequeña frente a los 14 puntos que las separan del
+  motor, y publicar dos variantes daría a elegir entre cifras, ninguna evaluada. La de 32,8 % se
+  calculó en memoria y no queda en el código ni en el reporte.
+- **Causa verificada con `data/processed/trm.csv`** (la hipótesis del autor se confirma): la banda
+  es el 23,0 % de los rendimientos, con deriva de 14,5 % por año y volatilidad diaria de 0,413 %;
+  la flotación, 1,9 % por año y 0,733 %. El choque estandarizado medio z = r/σ vale 0,179 en la
+  banda y 0,016 en la flotación: la banda pone 0,041 de los 0,053 del conjunto. Reescalados con la
+  volatilidad de largo plazo, los choques de la banda equivalen a 0,121 % diario, 2,1 veces su
+  depreciación real (0,059 %). Las cifras van al reporte con hash (`causa.*`).
+- **Las cifras del motor no cambian**: las 137 claves de la corrida versionada 200b84c2c1a1 dan lo
+  mismo con el código nuevo (comprobado en memoria con 10.000 trayectorias). Corrida nueva =
+  ficha nueva (cambian el hash de código y el de datos).
+
+## 16-nov-2026 · F6 (revisión externa)
+- **Bloqueante B1, corregido.** La sección 4 del caso decía que el filtrado impide que la banda se
+  traslade a hoy. Vale para la volatilidad; la deriva de la banda entra amplificada y mueve la
+  cifra principal de ≈ 31 % a 45 %. El texto ahora lo dice y remite al análisis posterior.
+- **Bloqueante B2, corregido.** En la sección 5 la mediana aparecía en la misma fila que la
+  cobertura medida, como si esta la respaldara. La cobertura respalda los límites; cada fila dice
+  ahora «límites: prueba final…; Mediana: sin respaldo fuera de muestra».
+- **I1 publicado como análisis posterior (decisión del autor).** `motor/respaldo.asimetria_motor`
+  cuenta, con los resultados de la prueba final, la proporción de veces que la TRM real quedó
+  bajo la mediana del motor y fuera de cada límite, con el n efectivo y el intervalo binomial de
+  `cobertura_n_efectivo`. Resultado: bajo la mediana 0,542/0,568/0,620/0,663/0,710/0,801 a
+  1/5/21/63/126/252; a 252 días, 6,8 % bajo el límite inferior y 0,0 % sobre el superior. A 63,
+  126 y 252 días el reporte lo llama indicio, no prueba. `data/respaldo/prueba_final.json` se
+  regeneró: ningún valor anterior cambió (comprobado) y se agregó la sección `posterior`;
+  cambia su SHA-256 y, con él, el hash de datos del caso. Descartado: escribirlo en
+  `reportes/prueba_final.py` (ese reporte es solo lo prerregistrado).
+- **I3 corregido**: la ficha de `bootstrap_est_filtrado` decía «falta la prueba final» y «no tiene
+  opinión de dirección»; ahora trae las cifras de la prueba final, la deriva implícita y su causa.
+- **I4 corregido**: «Error de Monte Carlo… a lo sumo ±» era un error estándar; el reporte lo llama
+  así y aclara que no es una cota.
+- **Frase inicial del reporte** (pedido del autor): las tres P(superar presupuesto), de menor a
+  mayor, y que la diferencia viene sobre todo de la deriva que cada método supone.
+- **Sin fugas halladas y coberturas reales**: los 82 SHA-256 de `HECHO.json` coinciden con los
+  archivos locales, las 12 coberturas del respaldo se recomputan idénticas desde
+  `runs/prueba_final*/` y `trm.csv` es el de la prueba final. Lo importante y lo menor que no se
+  corrigió queda listado en `docs/estado.md`.

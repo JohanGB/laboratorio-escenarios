@@ -50,6 +50,12 @@ def main(argv=None) -> int:
         for m, colas in r_.datos["var_h1"].items():
             print(m + " VaR h=1: " + "  ".join(
                 f"{c} {v['tasa']:.4f} (p {v['p_kupiec']:.3f})" for c, v in colas.items()))
+        post = r_.datos.get("posterior", {})
+        for motor, por_h in post.get("asimetria", {}).items():
+            print(f"{post['titulo']}, {motor}, bajo la mediana / bajo el límite / sobre el límite: "
+                  + "  ".join(f"h={h} {v['bajo_mediana']['proporcion']:.3f}/"
+                              f"{v['bajo_inferior']['proporcion']:.3f}/{v['sobre_superior']['proporcion']:.3f}"
+                              for h, v in sorted(por_h.items(), key=lambda kv: int(kv[0]))))
         return 0
 
     from . import montecarlo

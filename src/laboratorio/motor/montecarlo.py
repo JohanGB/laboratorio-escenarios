@@ -13,6 +13,13 @@ Los dos remuestrean TODA la historia de la serie (banda incluida), como en la ev
 
 El origen es la última observación de la vista. La fila k de `acum` es el rendimiento
 logarítmico acumulado a k+1 pasos (un paso = una observación de la serie, un día con TRM).
+
+Análisis posterior (no confirmatorio), F5b: `simular(..., desde=fecha)` remuestrea solo las
+observaciones con fecha ≥ `desde` (el régimen de flotación). Es lo ÚNICO que cambia: longitud de
+bloque, σ̄, ρ, σ del origen, semilla y generador son los del motor ajustado con toda la historia.
+Así la diferencia frente al motor se debe a una sola causa, la muestra. Esa variante no se evaluó
+nunca: las coberturas de la prueba final no le aplican. `resumen_regimenes` da las cifras que
+explican la diferencia (peso, deriva y choque estandarizado medio de cada tramo).
 """
 from __future__ import annotations
 
@@ -25,7 +32,8 @@ import pandas as pd
 
 from ..backtest.datos import Vista, construir_vista
 from ..backtest.final import MOTOR_CASO, MOTOR_SENSIBILIDAD
-from ..modelos.bootstrap import BootstrapEstacionario, _sigma2_ewma, trayectorias
+from ..modelos.bootstrap import (MIN_OBS, BootstrapEstacionario, _sigma2_ewma,
+                                 residuos_estandarizados, trayectorias)
 from .plan import PlanCompra
 
 SEMILLA = 20240501
@@ -45,6 +53,8 @@ class Simulacion:
     sigma_largo: float | None      # desvío diario de largo plazo (solo filtrado)
     origen: int
     semilla: int
+    muestra_desde: str | None = None   # None = toda la historia (el motor evaluado)
+    n_muestra: int = 0                 # observaciones que entran al remuestreo
 
     @property
     def sims(self) -> int:
@@ -56,12 +66,22 @@ def vista_trm(df: pd.DataFrame) -> Vista:
     return construir_vista(df, pd.DataFrame(index=df.index[:0]))
 
 
+def _serie_con_fecha(vista: Vista, filtrado: bool) -> tuple[np.ndarray, np.ndarray]:
+    """La serie que remuestrea el motor (z = r/σ si es filtrado; r si no) y la fecha de cada dato."""
+    x = residuos_estandarizados(vista.r) if filtrado else vista.r[1:]
+    ok = np.isfinite(x)
+    return x[ok], np.asarray(vista.fechas[1:])[ok]
+
+
 def simular(vista: Vista, motor: str = MOTOR_CASO, sims: int = TRAYECTORIAS, semilla: int = SEMILLA,
-            largo: int = LARGO_MIN, bloque: float | None = None) -> Simulacion:
+            largo: int = LARGO_MIN, bloque: float | None = None, desde=None) -> Simulacion:
     """`sims` trayectorias de `largo` pasos desde la última observación de `vista`.
 
     `bloque` fija la longitud media de bloque (None = Politis-White); con bloque = 1 se obtiene
     el bootstrap simple (sorteos independientes).
+    `desde` (análisis posterior, no confirmatorio): remuestrea solo las observaciones con fecha
+    ≥ `desde`; todo lo demás (bloque, σ̄, ρ, σ del origen, generador) es lo del motor ajustado
+    con toda la historia. Con `desde=None` el resultado es exactamente el del motor evaluado.
     """
     if motor not in FILTRADO:
         raise ValueError(f"motor desconocido: {motor!r} (use {tuple(FILTRADO)})")
@@ -73,13 +93,52 @@ def simular(vista: Vista, motor: str = MOTOR_CASO, sims: int = TRAYECTORIAS, sem
     m.ajustar(vista)
     o = vista.n - 1
     x = m._serie(vista.r[: o + 1])                           # igual que en `pronosticar`
+    if desde is not None:
+        todo, fechas = _serie_con_fecha(vista, filtrado)
+        x = todo[fechas >= np.datetime64(pd.Timestamp(desde))]
+        if len(x) < MIN_OBS:
+            raise ValueError(f"solo {len(x)} observaciones desde {pd.Timestamp(desde).date()}: "
+                             f"se requieren al menos {MIN_OBS} para remuestrear")
     rng = np.random.default_rng([semilla, o])
     s2o = float(_sigma2_ewma(vista.r)[o]) if filtrado else None
     esc = m.escala(s2o, largo) if filtrado else None
     acum = trayectorias(x, largo, sims, m.bloque, rng, esc)
     return Simulacion(motor, acum, float(m.bloque), m.rho,
                       float(np.sqrt(s2o)) if filtrado else None,
-                      float(np.sqrt(m.sigma2_largo)) if filtrado else None, o, semilla)
+                      float(np.sqrt(m.sigma2_largo)) if filtrado else None, o, semilla,
+                      None if desde is None else str(pd.Timestamp(desde).date()), len(x))
+
+
+def resumen_regimenes(vista: Vista, desde, sigma_largo: float) -> dict[str, dict]:
+    """Por qué cambia el resultado al remuestrear solo desde `desde` (análisis posterior).
+
+    Parte la serie en «antes» (fecha < desde) y «desde» (fecha ≥ desde) y da, de cada tramo:
+    n; peso (% de las observaciones); deriva_anual (100 × Σ r / años de calendario del tramo);
+    vol_diaria (100 × desvío de r); media_r (100 × media de r, % diario); media_z (media del
+    choque estandarizado z = r/σ, lo que remuestrea el motor filtrado); aporte_z (peso × media_z:
+    cuánto de la media de z del conjunto pone el tramo) y equiv_diario (100 × media_z ×
+    `sigma_largo`: el rendimiento diario medio con que ese tramo entra al motor, % diario).
+    Un tramo con menos de 2 observaciones no aparece.
+    """
+    corte = np.datetime64(pd.Timestamp(desde))
+    r, fr = _serie_con_fecha(vista, False)
+    z, fz = _serie_con_fecha(vista, True)
+    fechas = np.asarray(vista.fechas)
+    out = {}
+    for nombre, mr, mz in (("antes", fr < corte, fz < corte), ("desde", fr >= corte, fz >= corte)):
+        if mr.sum() < 2 or mz.sum() < 2:
+            continue
+        rr, zz = r[mr], z[mz]
+        previa = fechas[fechas < fr[mr][0]]                  # la observación anterior al primer rendimiento
+        inicio = previa[-1] if len(previa) else fr[mr][0]
+        anios = float((fr[mr][-1] - inicio) / np.timedelta64(1, "D")) / 365.25
+        out[nombre] = {"n": int(mr.sum()), "peso": 100.0 * float(mr.mean()),
+                       "deriva_anual": 100.0 * float(rr.sum()) / anios,
+                       "vol_diaria": 100.0 * float(rr.std(ddof=1)),
+                       "media_r": 100.0 * float(rr.mean()), "media_z": float(zz.mean()),
+                       "aporte_z": float(zz.sum()) / len(z),
+                       "equiv_diario": 100.0 * float(zz.mean()) * float(sigma_largo)}
+    return out
 
 
 def costos(plan: PlanCompra, trm0: float, acum: np.ndarray, pasos: Sequence[int]) -> np.ndarray:

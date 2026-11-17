@@ -10,6 +10,12 @@ F5 agrega el Monte Carlo por bloques (`montecarlo.py`): el motor prerregistrado
 (`bootstrap_est_filtrado`), la sensibilidad (`bootstrap_est`) y el abanico de la TRM. Cada cifra
 principal dice qué evaluación de la prueba final la respalda (`respaldo.py`) o «sin respaldo
 fuera de muestra». Semilla y número de trayectorias van en la ficha, no en los supuestos.
+
+F5b y F6 agregan dos bloques titulados «análisis posterior (no confirmatorio)», hechos después
+de ver la prueba final y los resultados del caso; no reemplazan nada de lo prerregistrado:
+- §4: el mismo motor remuestreando solo la flotación (`flot.*`) al lado del motor, que sigue
+  siendo el principal, y las cifras que explican la diferencia (`causa.*`).
+- §5: de qué lado de la banda del motor quedó la TRM real en la prueba final (`post.*`).
 """
 from __future__ import annotations
 
@@ -30,7 +36,7 @@ from ..historica import (DistribucionHistorica, distribucion, desplazar_meses, p
                          ratios_ventana, ratios_todas, reproducir)
 from ..plan import PlanCompra
 from ..respaldo import ARCHIVO as ARCHIVO_RESPALDO, RUTA as RUTA_RESPALDO, Respaldo
-from ..respaldo import cargar as cargar_respaldo
+from ..respaldo import TITULO_POSTERIOR as POSTERIOR, cargar as cargar_respaldo
 from ..supuestos import ConjuntoSupuestos, Registro
 
 CASO = "compra_dolares"
@@ -38,6 +44,10 @@ MODO = "determinista+historica+montecarlo"
 HORIZONTES_EVALUADOS = tuple(HORIZONTES) + tuple(HORIZONTES_LARGOS)
 SIN_RESPALDO = "sin respaldo fuera de muestra"
 COLAS_REFERENCIA = (("sup5", "sup 5 %"), ("sup1", "sup 1 %"))
+TRAMOS = {"antes": "Antes del {desde} (banda cambiaria)", "desde": "Desde el {desde} (flotación)"}
+MEDIDAS_MC = (("Costo esperado (media)", "media", 0), ("Mediana", "p50", 0), ("Percentil 5", "p5", 0),
+              ("Percentil 95", "p95", 0), ("Probabilidad de superar el presupuesto", "prob_superar", 1),
+              ("Probabilidad de salir más barato que comprar hoy", "prob_mas_barato", 1))
 FIGURA = "compra_dolares_abanico.png"
 ILUSTRATIVO = ("Valor ilustrativo definido por el autor del laboratorio; reemplazar por la "
                "meta real antes de usar los resultados.")
@@ -139,11 +149,16 @@ def _montecarlo(K: dict[str, Cifra], datos: DatosTRM, plan: PlanCompra, serie: C
                              "mediana, en las ventanas históricas, de las observaciones entre el "
                              "inicio y la última compra", [serie, desde, K["n"], K["intervalo"]])
     motor = None
-    for pref, nombre in (("mc", MOTOR_CASO), ("sens", MOTOR_SENSIBILIDAD)):
-        sim = mc_.simular(vista, nombre, sims, semilla, largo)
+    # «flot» = análisis posterior (no confirmatorio): el motor remuestreando solo desde `desde`.
+    for pref, nombre, muestra in (("mc", MOTOR_CASO, None), ("sens", MOTOR_SENSIBILIDAD, None),
+                                  ("flot", MOTOR_CASO, desde.valor)):
+        sim = mc_.simular(vista, nombre, sims, semilla, largo, desde=muestra)
         costos = mc_.costos(plan, trm0, sim.acum, pasos)
         d = DistribucionHistorica(pd.DatetimeIndex([]), costos, costo_hoy)
         cola = f", {sims} trayectorias de {nombre} (semilla {semilla}, {largo} pasos)"
+        if muestra is not None:
+            cola += (f"; {POSTERIOR}: remuestrea solo las {sim.n_muestra} observaciones con fecha "
+                     f">= {muestra}, con el bloque y la volatilidad del motor")
         for k, formula, valor in (("media", "media del costo", float(costos.mean())),
                                   ("p5", "percentil 5 del costo", d.percentil(5)),
                                   ("p50", "percentil 50 (mediana) del costo", d.percentil(50)),
@@ -158,10 +173,34 @@ def _montecarlo(K: dict[str, Cifra], datos: DatosTRM, plan: PlanCompra, serie: C
         K[f"{pref}.deriva_252"] = D(
             100 * float(np.expm1(np.median(sim.acum[mc_.LARGO_MIN - 1]))), "%",
             f"100 × (mediana de la TRM simulada a {mc_.LARGO_MIN} pasos / TRM_hoy − 1)" + cola,
-            [K["trm0"], serie])
+            [K["trm0"], serie] + ([desde] if muestra is not None else []))
         if pref == "mc":
             motor = (sim, costos, d, cola)
+        if pref == "flot":
+            K["flot.med_252"] = D(
+                trm0 * float(np.exp(np.median(sim.acum[mc_.LARGO_MIN - 1]))), "COP/USD",
+                f"TRM_hoy × exp(mediana del rendimiento acumulado a {mc_.LARGO_MIN} pasos)" + cola,
+                [K["trm0"], serie, desde])
+            K["flot.n_muestra"] = D(sim.n_muestra, "observaciones",
+                                    "observaciones de la serie con fecha >= desde y rendimiento", [serie, desde])
     sim, costos, d, cola = motor
+    # Causa de la diferencia (análisis posterior): qué pone cada tramo de la serie en el motor.
+    for tramo, r_ in mc_.resumen_regimenes(vista, desde.valor, sim.sigma_largo).items():
+        lado = "anterior a" if tramo == "antes" else "igual o posterior a"
+        donde = f", observaciones con fecha {lado} desde ({POSTERIOR})"
+        for k, unidad, formula in (
+                ("peso", "%", "100 × observaciones del tramo / observaciones con rendimiento"),
+                ("deriva_anual", "% por año", "100 × suma de rendimientos logarítmicos / años de calendario"),
+                ("vol_diaria", "% diario", "100 × desvío estándar del rendimiento logarítmico diario"),
+                ("media_r", "% diario", "100 × media del rendimiento logarítmico diario"),
+                ("media_z", "adimensional", "media de z = r / desvío EWMA(0,94) del día anterior"),
+                ("aporte_z", "adimensional", "suma de z del tramo / observaciones de toda la serie"),
+                ("equiv_diario", "% diario", "100 × media de z del tramo × desvío diario de largo plazo")):
+            K[f"causa.{tramo}.{k}"] = D(r_[k], unidad, formula + donde, [serie, desde])
+        if r_["media_r"] > 0:
+            K[f"causa.{tramo}.factor"] = D(r_["equiv_diario"] / r_["media_r"], "veces",
+                                           "equivalente diario en el motor / rendimiento diario medio",
+                                           [K[f"causa.{tramo}.equiv_diario"], K[f"causa.{tramo}.media_r"]])
     K["mc.dif_media"] = D(K["mc.media"].valor - costo_hoy, "COP",
                           "costo esperado simulado − costo hoy", [K["mc.media"], K["costo_hoy"]])
     K["mc.dif_p95"] = D(K["mc.p95"].valor - costo_hoy, "COP",
@@ -178,6 +217,11 @@ def _montecarlo(K: dict[str, Cifra], datos: DatosTRM, plan: PlanCompra, serie: C
                              "100 × desvío diario EWMA(0,94) en la última observación", [serie])
     K["mc.sigma_largo"] = D(sim.sigma_largo * 100, "% diario",
                             "100 × raíz de la media de r² en toda la historia", [serie])
+    aportes = [K[f"causa.{t}.aporte_z"] for t in TRAMOS if f"causa.{t}.aporte_z" in K]
+    if len(aportes) == len(TRAMOS):
+        K["causa.media_z"] = D(sum(a.valor for a in aportes), "adimensional",
+                               "suma de los aportes de los tramos = media de z de toda la serie "
+                               f"({POSTERIOR})", aportes)
 
     b = mc_.bandas(sim.acum, trm0)                           # (largo + 1, niveles)
     for h in HORIZONTES_EVALUADOS:
@@ -193,6 +237,10 @@ def _montecarlo(K: dict[str, Cifra], datos: DatosTRM, plan: PlanCompra, serie: C
             dentro = cob["ic_inf"].valor <= cob["nominal"].valor <= cob["ic_sup"].valor
             K[f"resp.{h}.compatible"] = D("sí" if dentro else "no", "", "ic_inf ≤ nominal ≤ ic_sup",
                                           [cob["ic_inf"], cob["nominal"], cob["ic_sup"]])
+        asim = respaldo.asimetria(MOTOR_CASO, h) if respaldo and cob else None
+        for medida, campos in (asim or {}).items():          # análisis posterior (no confirmatorio)
+            for k, cifra in campos.items():
+                K[f"post.{h}.{medida}.{k}"] = cifra
     ex = respaldo.exito(1) if respaldo else None             # único horizonte con modelo de referencia
     if ex:
         for k, cifra in ex.items():
@@ -321,11 +369,108 @@ def _reporte_md(K: dict[str, Cifra], ficha: Ficha) -> str:
     hay = "resp.1.cobertura" in K                    # ¿hay archivo de respaldo?
     c3 = lambda c: rep.r(c, 3, unidad=False)         # noqa: E731  (coberturas y p-valores)
     mc = "\n".join(
-        f"| {etq} | {fmt(K[f'mc.{k}'])} | {fmt(K[f'sens.{k}'])} | {fmt(K[f'dist.{k}'])} | {SIN_RESPALDO} |"
-        for etq, k, fmt in (("Costo esperado (media)", "media", cop), ("Mediana", "p50", cop),
-                            ("Percentil 5", "p5", cop), ("Percentil 95", "p95", cop),
-                            ("Probabilidad de superar el presupuesto", "prob_superar", pct),
-                            ("Probabilidad de salir más barato que comprar hoy", "prob_mas_barato", pct)))
+        f"| {etq} | {rep.r(K[f'mc.{k}'], d)} | {rep.r(K[f'sens.{k}'], d)} | {rep.r(K[f'dist.{k}'], d)} | "
+        f"{SIN_RESPALDO} |" for etq, k, d in MEDIDAS_MC)
+
+    # --- análisis posterior (no confirmatorio) de la sección 4: solo flotación -------------------
+    L = mc_.LARGO_MIN
+    tres = sorted((("el motor prerregistrado", K["mc.prob_superar"]),
+                   ("el mismo motor remuestreando solo la flotación (análisis posterior)",
+                    K["flot.prob_superar"]),
+                   ("las ventanas históricas", K["dist.prob_superar"])), key=lambda t: t[1].valor)
+    rango = ("**Antes de leer las cifras.** La probabilidad de que el Plan B supere el presupuesto "
+             f"depende del método: {pct(tres[0][1])} con {tres[0][0]}, {pct(tres[1][1])} con "
+             f"{tres[1][0]} y {pct(tres[2][1])} con {tres[2][0]}. La diferencia viene sobre todo de "
+             "la deriva de la TRM que cada método supone (cuánto sube el dólar en promedio), no del "
+             "azar de la simulación: el motor arrastra, amplificada, la depreciación de los años de "
+             "banda cambiaria (sección 4). Ninguna de las tres cifras tiene respaldo fuera de muestra.")
+    flot = "\n".join(
+        [f"| Mediana de la TRM a {L} días | {rep.r(K[f'abanico.{L}.med'])} "
+         f"({pct(K['mc.deriva_252'])} frente a hoy) | {rep.r(K['flot.med_252'])} "
+         f"({pct(K['flot.deriva_252'])} frente a hoy) | {SIN_RESPALDO} |"]
+        + [f"| {etq} | {rep.r(K[f'mc.{k}'], d)} | {rep.r(K[f'flot.{k}'], d)} | {SIN_RESPALDO} |"
+           for etq, k, d in MEDIDAS_MC])
+    tramos = [t for t in TRAMOS if f"causa.{t}.peso" in K]
+    causa = "\n".join(
+        f"| {TRAMOS[t].format(desde=f(K['desde']))} | {pct(K[f'causa.{t}.peso'])} | "
+        f"{rep.r(K[f'causa.{t}.deriva_anual'], 1)} | {rep.r(K[f'causa.{t}.vol_diaria'], 3)} | "
+        f"{rep.r(K[f'causa.{t}.media_r'], 4)} | {rep.r(K[f'causa.{t}.media_z'], 3, unidad=False)} | "
+        f"{rep.r(K[f'causa.{t}.aporte_z'], 4, unidad=False)} | {rep.r(K[f'causa.{t}.equiv_diario'], 4)} |"
+        for t in tramos)
+    if len(tramos) == len(TRAMOS):
+        a, d_ = "causa.antes", "causa.desde"
+        veces = (f", {rep.r(K[f'{a}.factor'], 1)} lo que de verdad se depreció ({rep.r(K[f'{a}.media_r'], 4)})"
+                 if f"{a}.factor" in K else "")
+        explica = (
+            f"La banda cambiaria es el {pct(K[f'{a}.peso'])} de las observaciones. En esos años la "
+            f"deriva de la TRM fue de {rep.r(K[f'{a}.deriva_anual'], 1)} (desde la flotación, "
+            f"{rep.r(K[f'{d_}.deriva_anual'], 1)}) con una volatilidad de "
+            f"{rep.r(K[f'{a}.vol_diaria'], 3)} (desde la flotación, {rep.r(K[f'{d_}.vol_diaria'], 3)}). "
+            "El motor divide cada rendimiento por la volatilidad de su época y lo multiplica por la "
+            "de hoy: un alza pequeña y constante en una época tranquila se convierte en un choque "
+            "grande. Por eso los choques de la banda entran al motor como una depreciación de "
+            f"{rep.r(K[f'{a}.equiv_diario'], 4)}{veces}, y ese tramo pone "
+            f"{rep.r(K[f'{a}.aporte_z'], 4, unidad=False)} de los "
+            f"{rep.r(K['causa.media_z'], 4, unidad=False)} que vale el choque medio de toda la serie. "
+            "La sensibilidad sin filtrar (los rendimientos tal cual) incluye la banda, pero no la "
+            "amplifica.")
+    else:
+        explica = ("Toda la serie queda de un solo lado de esa fecha: la variante y el motor "
+                   "remuestrean lo mismo y no hay diferencia que explicar.")
+
+    # --- análisis posterior (no confirmatorio) de la sección 5: de qué lado quedó la TRM real ----
+    hs_post = [h for h in HORIZONTES_EVALUADOS if f"post.{h}.bajo_mediana.proporcion" in K]
+
+    def fila_post(h: int) -> str:
+        bm = {k: K[f"post.{h}.bajo_mediana.{k}"] for k in ("proporcion", "ic_inf", "ic_sup", "compatible")}
+        n_ef = nu(K[f"resp.{h}.n_efectivo"])
+        if h in HORIZONTES_ADVERTENCIA:
+            lectura = f"**indicio, no prueba**: solo {n_ef} ventanas independientes"
+        elif bm["compatible"].valor == "sí":
+            lectura = "compatible con una banda bien centrada"
+        elif bm["proporcion"].valor > K[f"post.{h}.bajo_mediana.esperado"].valor:
+            lectura = "la mitad queda fuera del intervalo: la TRM real quedó bajo la mediana más de lo esperado"
+        else:
+            lectura = "la mitad queda fuera del intervalo: la TRM real quedó bajo la mediana menos de lo esperado"
+        return (f"| {h} | {c3(bm['proporcion'])} | {c3(bm['ic_inf'])} a {c3(bm['ic_sup'])} | "
+                f"{c3(K[f'post.{h}.bajo_inferior.proporcion'])} | "
+                f"{c3(K[f'post.{h}.sobre_superior.proporcion'])} | {n_ef} | {lectura} |")
+
+    if hs_post:
+        h0 = hs_post[0]
+        altas = [h for h in hs_post if K[f"post.{h}.bajo_mediana.proporcion"].valor
+                 > K[f"post.{h}.bajo_mediana.esperado"].valor]
+        if len(altas) == len(hs_post):
+            conjunto = ("En todos los horizontes la TRM real quedó bajo la mediana del motor más de la "
+                        "mitad de las veces. Es lo que se esperaría de una mediana corrida hacia "
+                        "arriba, como la que produce la deriva de la sección 4, pero un solo periodo "
+                        "de prueba no basta para atribuirlo solo a esa causa.")
+        else:
+            conjunto = ("El resultado no apunta al mismo lado en todos los horizontes: no permite "
+                        "decir que la mediana del motor esté corrida.")
+        largos = (", ".join(str(h) for h in HORIZONTES_ADVERTENCIA[:-1])
+                  + f" y {HORIZONTES_ADVERTENCIA[-1]}")
+        asimetria = f"""
+
+### Análisis posterior (no confirmatorio): de qué lado de la banda quedó la TRM real
+
+Este bloque no estaba en el prerregistro: se calculó después, con los mismos resultados de la
+prueba final, y no confirma ni rechaza nada. La cobertura de la tabla anterior junta las dos
+colas y no dice nada de la mediana. Aquí se cuenta, por horizonte, la proporción de veces que la
+TRM real quedó por debajo de la mediana del motor (con una banda bien centrada sería
+{c3(K[f'post.{h0}.bajo_mediana.esperado'])}) y fuera de cada límite (lo ideal es
+{c3(K[f'post.{h0}.bajo_inferior.esperado'])} por lado). El intervalo de confianza es el de la
+proporción bajo la mediana y usa las mismas ventanas independientes (n efectivo) de la cobertura.
+
+| Horizonte (días con TRM) | Bajo la mediana del motor | Intervalo de confianza | Bajo el límite inferior | Sobre el límite superior | Ventanas independientes | Lectura |
+|---:|---:|---:|---:|---:|---:|---|
+{chr(10).join(fila_post(h) for h in hs_post)}
+
+{conjunto} **A {largos} días es un indicio, no una prueba**: con tan pocas ventanas independientes
+casi cualquier proporción cabe en el intervalo. Estas proporciones describen al motor; no hay
+medición equivalente para la variante solo con flotación de la sección 4."""
+    else:
+        asimetria = ""
     if hay:
         indirecto = ("ese horizonte queda entre 126 y 252 días, que en la prueba final son solo "
                      "descriptivos (cobertura medida del intervalo del 95 %: "
@@ -340,10 +485,10 @@ def _reporte_md(K: dict[str, Cifra], ficha: Ficha) -> str:
         siempre = h in HORIZONTES_ADVERTENCIA
         if hay:
             desc = "descriptiva, " if h in HORIZONTES_LARGOS else ""
-            ev = (f"prueba final, {desc}cobertura medida {c3(K[f'resp.{h}.cobertura'])} "
+            ev = (f"límites: prueba final, {desc}cobertura medida {c3(K[f'resp.{h}.cobertura'])} "
                   f"(n efectivo {nu(K[f'resp.{h}.n_efectivo'])}; intervalo de confianza "
                   f"{rep.r(K[f'resp.{h}.ic_inf'], 2, unidad=False)} a "
-                  f"{rep.r(K[f'resp.{h}.ic_sup'], 2, unidad=False)})")
+                  f"{rep.r(K[f'resp.{h}.ic_sup'], 2, unidad=False)}). Mediana: {SIN_RESPALDO}")
             if siempre:
                 adv = (f"**siempre**: solo {nu(K[f'resp.{h}.n_efectivo'])} ventanas independientes; "
                        "que la cobertura nominal quepa en el intervalo no prueba que la banda esté "
@@ -379,6 +524,8 @@ Reporte generado por `python -m laboratorio.motor compra_dolares`. Los rangos de
 incertidumbre (histórica y simulada); no son pronóstico ni asesoría financiera. Cada cifra
 termina en un código `#hash` que remite al apéndice con su fuente y su hash SHA-256. Bajo cada
 bloque de cifras se dice qué evaluación fuera de muestra lo respalda, o «{SIN_RESPALDO}».
+
+{rango}
 
 ## Planteamiento
 
@@ -450,26 +597,30 @@ medidas que se citan en la sección 5 no respaldarían estas cifras; (b) la band
 crisis de 1997-1999, uno de los pocos episodios de estrés que hay; (c) el motor remuestrea
 choques ya divididos por la volatilidad de su época, así que el nivel de volatilidad de los
 años de banda no se traslada a hoy: la escala la pone la volatilidad actual. En la sensibilidad
-sin filtrar el motivo (c) no aplica.
+sin filtrar el motivo (c) no aplica. El motivo (c) vale para la volatilidad, no para la deriva:
+ese mismo filtrado amplifica la depreciación de los años de banda (análisis posterior, al final
+de esta sección).
 
 **Lo que esa decisión cuesta: la deriva.** El promedio histórico de los choques (incluida la
-depreciación sostenida de los años noventa) sí entra en las trayectorias. La mediana simulada
-de la TRM a 252 días queda {pct(K['mc.deriva_252'])} por encima de la de hoy
-({pct(K['sens.deriva_252'])} en la sensibilidad), mientras que el escenario base de la sección 1,
-que solo mira la flotación, supone una deriva logarítmica anual de {nu(K['det.base.g'], 4)}. Esa
-deriva empuja hacia arriba el costo esperado y la probabilidad de superar el presupuesto frente
-a las ventanas históricas. No es un pronóstico de dirección: es una propiedad del modelo
-evaluado, que se deja a la vista y no se corrige aquí porque el motor quedó fijado antes de
-la prueba final.
+depreciación sostenida de los años noventa) sí entra en las trayectorias, y en el motor entra
+amplificado. La mediana simulada de la TRM a {L} días queda {pct(K['mc.deriva_252'])} por encima
+de la de hoy ({pct(K['sens.deriva_252'])} en la sensibilidad sin filtrar y
+{pct(K['flot.deriva_252'])} en el análisis posterior solo con flotación), mientras que el escenario
+base de la sección 1, que solo mira la flotación, supone una deriva logarítmica anual de
+{nu(K['det.base.g'], 4)}. Esa deriva empuja hacia arriba el costo esperado y la probabilidad de
+superar el presupuesto frente a las ventanas históricas. No es una opinión del laboratorio sobre
+hacia dónde va el dólar: es una propiedad del modelo evaluado, que se deja a la vista y no se
+corrige aquí porque el motor quedó fijado antes de la prueba final.
 
 | Medida del Plan B | Monte Carlo (motor) | Sensibilidad (sin filtrar) | Ventanas históricas | Evaluación que la respalda |
 |---|---:|---:|---:|---|
 {mc}
 
 Diferencia frente al Plan A: costo esperado {cop(K['mc.dif_media'])}; percentil 95
-{cop(K['mc.dif_p95'])}. Error de Monte Carlo (solo por simular un número finito de trayectorias;
-no mide el error del modelo): ± {cop(K['mc.ee_media'])} en la media y a lo sumo
-± {rep.r(K['mc.ee_prob'], 2)} en las probabilidades.
+{cop(K['mc.dif_p95'])}. Error estándar de Monte Carlo (solo por simular un número finito de
+trayectorias; no mide el error del modelo): {cop(K['mc.ee_media'])} en la media y
+{rep.r(K['mc.ee_prob'], 2)} en la probabilidad que más error tiene de las dos. Es un error
+estándar, no una cota: el intervalo del 95 % es aproximadamente el doble a cada lado.
 
 **Respaldo de estas cifras: indirecto.** Ninguna tiene una evaluación directa fuera de muestra.
 El caso reparte la compra en {nu(K['n'])} cuotas: la última cae a
@@ -479,6 +630,35 @@ acumulado a 1, 5, 21, 63, 126 y 252 días, cada uno por separado. Dos límites: 
 acertar cada horizonte por separado no garantiza acertar la trayectoria completa de la que
 depende el costo total.
 
+### Análisis posterior (no confirmatorio): el mismo bootstrap solo con la flotación
+
+Este bloque no estaba en el prerregistro: se hizo después de ver la prueba final y las cifras de
+arriba. No reemplaza al motor, que sigue siendo el principal, y no se usó para elegir nada.
+Repite la simulación del motor con la misma semilla ({ficha.semilla}) y las mismas
+{formatear(sims, 0)} trayectorias, y cambia una sola cosa: remuestrea solo las
+{nu(K['flot.n_muestra'])} observaciones desde {f(K['desde'])} (el régimen de flotación). La
+longitud de bloque y la volatilidad, la de hoy y la de largo plazo, son las del motor.
+
+| Medida del Plan B | Motor prerregistrado (principal) | Solo flotación (análisis posterior) | Evaluación que la respalda |
+|---|---:|---:|---|
+{flot}
+
+**Causa de la diferencia.** Lo que cada tramo de la serie pone en el motor:
+
+| Tramo de la serie | Peso en la muestra | Deriva anual observada | Volatilidad diaria | Rendimiento diario medio | Choque estandarizado medio | Aporte al choque medio de la serie | Equivalente diario en el motor |
+|---|---:|---:|---:|---:|---:|---:|---:|
+{causa}
+
+«Choque estandarizado» = rendimiento del día dividido por la volatilidad de su momento (lo que
+remuestrea el motor). «Equivalente diario en el motor» = ese choque medio multiplicado por la
+volatilidad de largo plazo. {explica}
+
+**Qué significa.** No dice cuál de las dos cifras es la correcta. El motor supone que la
+depreciación de los años de banda (un régimen de devaluación gradual que terminó el
+{f(K['desde'])}) puede repetirse y, además, la amplifica; la variante supone que no se repite.
+Ninguna de las dos tiene respaldo fuera de muestra, y la variante solo con flotación no se evaluó
+nunca: las coberturas de la sección 5 son del motor y no le aplican.
+
 ## 5. Abanico de la TRM y evaluación que lo respalda
 
 ![Abanico de la TRM proyectada](figs/{FIGURA})
@@ -486,13 +666,15 @@ depende el costo total.
 Límites = percentiles 2,5 y 97,5 de las trayectorias del motor (la banda del 95 %), en los
 horizontes que evaluó la prueba final. «Cobertura medida» = fracción de las veces, entre 2020 y
 2026, en que la TRM real cayó dentro de la banda del 95 % del mismo modelo (lo ideal es 0,95).
-El intervalo de confianza usa el n efectivo (ventanas sin traslape).
+El intervalo de confianza usa el n efectivo (ventanas sin traslape). La cobertura respalda los
+límites de la banda, no la mediana: la mediana queda {SIN_RESPALDO} y arrastra la deriva de la
+sección 4.
 
 | Horizonte (días con TRM) | Límite inferior | Mediana | Límite superior | Evaluación que la respalda | Advertencia |
 |---:|---:|---:|---:|---|---|
 {abanico}
 
-**Modelo de referencia.** {referencia}
+**Modelo de referencia.** {referencia}{asimetria}
 
 ## Limitaciones
 
@@ -551,7 +733,9 @@ def ejecutar(raiz: str | Path = ".", autor: str = "analista", actualizar_derivas
     resultado, K = calcular(datos, conjunto, mc, cargar_respaldo(p["respaldo"]))
     ficha = construir_ficha(CASO, _archivos(datos, p), conjunto, int(semilla),
                             {"modo": MODO, "trayectorias": int(trayectorias), "motor": MOTOR_CASO,
-                             "sensibilidad": MOTOR_SENSIBILIDAD}, resultado, p["codigo"])
+                             "sensibilidad": MOTOR_SENSIBILIDAD,
+                             "analisis_posterior": f"{MOTOR_CASO} remuestreando solo desde historica.desde"},
+                            resultado, p["codigo"])
     ruta_ficha = guardar(ficha, resultado, p["runs"])
     ab = resultado["abanico"]
     mc_.figura_abanico(ab["trm"], ab["niveles"], ab["pasos_compra"], p["figura"],

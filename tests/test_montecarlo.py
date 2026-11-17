@@ -101,6 +101,63 @@ def test_motor_filtrado_parte_de_la_volatilidad_actual():
         mc.simular(vista(), "ewma_0.94", sims=50)
 
 
+# ---- F5b: análisis posterior, remuestreo solo desde una fecha -----------------------------------------
+def vista_dos_tramos(n=1500, corte=700, seed=8):
+    """Antes del corte todos los rendimientos son positivos; desde el corte, todos negativos."""
+    rng = np.random.default_rng(seed)
+    idx = pd.bdate_range("2000-01-03", periods=n)
+    r = np.where(np.arange(n) < corte, 1.0, -1.0) * rng.uniform(0.001, 0.004, n)
+    trm = pd.DataFrame({"trm": 3000 * np.exp(np.cumsum(r)), "regimen": "flotacion", "estres": ""}, index=idx)
+    return mc.vista_trm(trm), idx[corte]
+
+
+@pytest.mark.parametrize("motor", [MOTOR_CASO, MOTOR_SENSIBILIDAD])
+def test_desde_remuestrea_solo_ese_tramo_y_no_cambia_nada_mas(motor):
+    v, corte = vista_dos_tramos()
+    todo = mc.simular(v, motor, sims=200, semilla=3, largo=80)
+    solo = mc.simular(v, motor, sims=200, semilla=3, largo=80, desde=corte)
+    pasos = lambda s: np.diff(np.vstack([np.zeros((1, s.sims)), s.acum]), axis=0)   # noqa: E731
+    assert (pasos(solo) < 0).all()                         # ni un solo rendimiento del tramo anterior
+    assert (pasos(todo) > 0).any() and (pasos(todo) < 0).any()
+    assert solo.n_muestra == v.n - 700 and todo.n_muestra == v.n - 1
+    assert solo.muestra_desde == str(corte.date()) and todo.muestra_desde is None
+    # lo único que cambia es la muestra: bloque, volatilidades y persistencia son los del motor
+    assert (solo.bloque, solo.rho, solo.sigma_origen, solo.sigma_largo) == (
+        todo.bloque, todo.rho, todo.sigma_origen, todo.sigma_largo)
+    otra = mc.simular(v, motor, sims=200, semilla=3, largo=80, desde=corte)
+    assert hash_resultado(otra.acum) == hash_resultado(solo.acum)                  # misma semilla
+    assert hash_resultado(solo.acum) != hash_resultado(todo.acum)
+    # una fecha anterior a toda la serie deja la muestra completa: resultado idéntico al del motor
+    assert np.array_equal(mc.simular(v, motor, sims=200, semilla=3, largo=80, desde="1990-01-01").acum,
+                          todo.acum)
+    with pytest.raises(ValueError, match="al menos 250"):
+        mc.simular(v, motor, sims=50, largo=30, desde=v.fechas[-100])
+
+
+def test_resumen_regimenes_coincide_con_el_calculo_a_mano():
+    from laboratorio.modelos.bootstrap import residuos_estandarizados
+    v, corte = vista_dos_tramos()
+    sigma = 0.007
+    res = mc.resumen_regimenes(v, corte, sigma)
+    r, z = v.r[1:], residuos_estandarizados(v.r)
+    antes = np.asarray(v.fechas[1:] < corte)
+    for nombre, m in (("antes", antes), ("desde", ~antes)):
+        t = res[nombre]
+        f = v.fechas[1:][m]
+        inicio = v.fechas[v.fechas < f[0]][-1]             # la observación anterior al primer rendimiento
+        anios = (f[-1] - inicio).days / 365.25
+        assert t["n"] == m.sum() and t["peso"] == pytest.approx(100 * m.mean())
+        assert t["media_r"] == pytest.approx(100 * r[m].mean())
+        assert t["vol_diaria"] == pytest.approx(100 * r[m].std(ddof=1))
+        assert t["deriva_anual"] == pytest.approx(100 * r[m].sum() / anios)
+        assert t["media_z"] == pytest.approx(z[m].mean())
+        assert t["equiv_diario"] == pytest.approx(100 * z[m].mean() * sigma)
+    assert res["antes"]["peso"] + res["desde"]["peso"] == pytest.approx(100)
+    assert res["antes"]["aporte_z"] + res["desde"]["aporte_z"] == pytest.approx(z.mean())
+    assert res["antes"]["deriva_anual"] > 0 > res["desde"]["deriva_anual"]
+    assert set(mc.resumen_regimenes(v, "1990-01-01", sigma)) == {"desde"}          # un solo tramo
+
+
 # ---- costos, bandas y pasos -------------------------------------------------------------------------
 def test_costos_a_mano_y_fronteras():
     acum = np.log(np.array([[1.10, 0.90], [1.20, 0.80], [1.50, 0.50]]))     # 3 pasos, 2 trayectorias
@@ -177,3 +234,56 @@ def test_respaldo_entrega_cifras_con_fuente_y_hash(tmp_path):
 def test_generar_respaldo_exige_la_prueba_final_terminada(tmp_path):
     with pytest.raises(FileNotFoundError, match="no ha terminado"):
         respaldo.generar(tmp_path)
+
+
+# ---- F6: análisis posterior, de qué lado de la banda quedó el valor real -----------------------------
+def _resultados(h: int, n: int, bajo_mediana: int, bajo_inferior: int, sobre_superior: int) -> pd.DataFrame:
+    """n orígenes con banda [−1, 0, 1]: los primeros quedan bajo el límite, luego bajo la mediana…"""
+    y = np.full(n, 0.5)                                    # entre la mediana y el límite superior
+    y[:bajo_mediana] = -0.5
+    y[:bajo_inferior] = -2.0
+    y[n - sobre_superior:] = 2.0
+    return pd.DataFrame({"h": h, "y": y, "q_0.025": -1.0, "q_0.5": 0.0, "q_0.975": 1.0})
+
+
+def test_asimetria_cuenta_a_cada_lado_de_la_banda_con_n_efectivo_e_intervalo_exacto():
+    from scipy import stats
+    from laboratorio.evaluacion.cobertura import cobertura_n_efectivo
+    res = {"m": pd.concat([_resultados(1, 200, 120, 10, 4), _resultados(5, 200, 130, 0, 30)])}
+    largo = {"m": _resultados(126, 630, 441, 63, 0)}
+    a = respaldo.asimetria_motor(res, largo, "m", (1, 5, 21), (126, 252))
+    assert set(a) == {"1", "5", "126"}                     # sin filas de un horizonte: no se inventa
+    assert a["1"]["n"] == 200 and a["1"]["n_efectivo"] == 200 and a["5"]["n_efectivo"] == 40
+    assert a["126"]["n_efectivo"] == 5
+    assert [a["1"][k]["proporcion"] for k in respaldo.MEDIDAS_ASIMETRIA] == [0.6, 0.05, 0.02]
+    assert [a["1"][k]["esperado"] for k in respaldo.MEDIDAS_ASIMETRIA] == [0.5, 0.025, 0.025]
+    ic = stats.binomtest(120, 200).proportion_ci(0.95, method="exact")             # Clopper-Pearson
+    assert (a["1"]["bajo_mediana"]["ic_inf"], a["1"]["bajo_mediana"]["ic_sup"]) == pytest.approx(
+        (ic.low, ic.high))
+    assert not a["1"]["bajo_mediana"]["compatible"]        # 0,5 queda fuera de [0,53; 0,67]
+    # las dos colas suman lo que le falta a la cobertura del 95 % publicada
+    d = res["m"][res["m"]["h"] == 5]
+    cob = cobertura_n_efectivo(d["y"], d["q_0.025"], d["q_0.975"], 0.95, 5)["cobertura"]
+    assert 1 - a["5"]["bajo_inferior"]["proporcion"] - a["5"]["sobre_superior"]["proporcion"] == pytest.approx(cob)
+    # mismo 0,70 bajo la mediana: con 5 ventanas independientes es compatible con 0,5 (indicio, no prueba)
+    assert a["126"]["bajo_mediana"]["proporcion"] == pytest.approx(0.7)
+    assert a["126"]["bajo_mediana"]["compatible"] and a["126"]["bajo_mediana"]["ic_inf"] < 0.5
+    assert respaldo.asimetria_motor(res, largo, "otro", (1,), (126,)) == {}
+
+
+def test_respaldo_entrega_la_asimetria_como_cifras_y_none_si_el_archivo_no_la_trae(tmp_path):
+    a = respaldo.asimetria_motor({MOTOR_CASO: _resultados(1, 200, 120, 10, 4)}, {}, MOTOR_CASO, (1,), ())
+    ruta = tmp_path / "prueba_final.json"
+    ruta.write_text(json.dumps(RESPALDO), encoding="utf-8")
+    assert respaldo.cargar(ruta).asimetria(MOTOR_CASO, 1) is None                  # archivo anterior a F6
+    ruta.write_text(json.dumps({**RESPALDO, "posterior": {
+        "titulo": respaldo.TITULO_POSTERIOR, "asimetria": {MOTOR_CASO: a}}}), encoding="utf-8")
+    r = respaldo.cargar(ruta)
+    c = r.asimetria(MOTOR_CASO, 1)
+    assert set(c) == set(respaldo.MEDIDAS_ASIMETRIA)
+    assert c["bajo_mediana"]["proporcion"].valor == 0.6 and c["bajo_mediana"]["compatible"].valor == "no"
+    assert c["sobre_superior"]["proporcion"].valor == 0.02 and c["sobre_superior"]["esperado"].valor == 0.025
+    cifras = [x for campos in c.values() for x in campos.values()]
+    assert all(x.origen == "dato" and "posterior;asimetria" in x.referencia for x in cifras)
+    assert len({x.hash for x in cifras}) == len(cifras)
+    assert r.asimetria(MOTOR_CASO, 5) is None and r.asimetria("otro", 1) is None
