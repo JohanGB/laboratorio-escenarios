@@ -1,5 +1,7 @@
 # Laboratorio de Escenarios
 
+En el [portafolio](https://johangb.github.io) aparece como **Vektor FX**.
+
 Proyecto de portafolio que responde, con la TRM (pesos por dólar), una pregunta práctica:
 **¿qué rango de resultados es razonable esperar, y qué tan confiable es ese rango?**
 El caso de uso es «compra de dólares»: comprar todo hoy frente a comprar en cuotas.
@@ -50,7 +52,9 @@ el reporte las presenta juntas. Se publicó el hallazgo en vez de esconderlo.
   no se abrieron (`docs/decisiones.md`).
 - **Cada cifra del caso** termina en un `#hash` que remite a su fuente, y dice qué evaluación
   fuera de muestra la respalda o «sin respaldo fuera de muestra».
-- 356 pruebas automáticas (`pytest`), incluidas pruebas de fuga de información.
+- **Auditoría independiente** de la prueba final (`docs/auditoria_independiente.md`): sus
+  hallazgos se corrigieron o quedaron cubiertos por pruebas (`tests/test_auditoria_h1.py`).
+- 365 pruebas automáticas (`pytest`), incluidas pruebas de fuga de información.
 
 ## Ejecutarlo (Windows, PowerShell)
 
@@ -84,6 +88,7 @@ tests/
 
 Documentos clave: [prerregistro](docs/prerregistro.md) · [decisiones](docs/decisiones.md) ·
 [supuestos](docs/supuestos.md) · [uso de IA](docs/uso_de_ia.md) ·
+[auditoría independiente](docs/auditoria_independiente.md) ·
 [reporte de la prueba final](reports/prueba_final.md) · [caso compra de dólares](reports/compra_dolares.md)
 
 ## Limitaciones
