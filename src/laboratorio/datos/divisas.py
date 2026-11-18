@@ -24,6 +24,9 @@ import pandas as pd
 from .limpieza import FIN_BANDA
 
 CORTE_ALINEACION = pd.Timestamp("2020-01-01")  # la alineación se decide sin mirar 2020 en adelante
+# Desde esta fecha, ninguna salida, validación ni registro de M1-M2 da valores de las divisas
+# nuevas: solo conteos (lo que se ve de 2020 en adelante se declara en el prerregistro de M3).
+CORTE_VISTO = CORTE_ALINEACION
 
 # Divisa -> serie FRED. Todas vienen en «X por USD» salvo DEXUSEU, que ya es USD por EUR.
 SERIES = {"EUR": "DEXUSEU", "MXN": "DEXMXUS", "JPY": "DEXJPUS",
@@ -164,17 +167,32 @@ def construir_divisas(trm: pd.Series, fred: dict[str, pd.Series], log: dict | No
     return pd.concat(filas, ignore_index=True)
 
 
-def validar_divisas(df: pd.DataFrame) -> dict:
-    """Positivos, duplicados y saltos diarios > 8 % (listados para revisión, nunca borrados)."""
+def es_divisa_nueva(nombre_archivo: str) -> bool:
+    """¿El archivo de data/raw es una de las series FRED de las divisas nuevas (M1)?"""
+    n = nombre_archivo.lower()
+    return any(n.startswith(f"{d.lower()}_fred_{s.lower()}_") for d, s in SERIES.items())
+
+
+def validar_divisas(df: pd.DataFrame, censura: pd.Timestamp = CORTE_VISTO) -> dict:
+    """Positivos, duplicados y saltos diarios > 8 % (listados para revisión, nunca borrados).
+
+    Los saltos con fecha ≥ `censura` no se listan: solo se cuentan por divisa
+    (`saltos_8pct_desde_corte`), sin fecha ni tamaño.
+    """
     cambio = np.expm1(df["ret_log"])
     saltos = df[cambio.abs() > SALTO_REVISION]
+    despues = pd.to_datetime(saltos["fecha"]) >= censura
     return {
         "filas": int(len(df)),
         "positivos": bool((df["cop_por_unidad"] > 0).all()),
         "duplicados": int(df.duplicated(["fecha", "divisa"]).sum()),
         "saltos_8pct": [{"fecha": str(pd.Timestamp(r.fecha).date()), "divisa": r.divisa,
                          "cambio_pct": round(100 * float(np.expm1(r.ret_log)), 4),
-                         "regimen": r.regimen} for r in saltos.itertuples()],
+                         "regimen": r.regimen} for r in saltos[~despues].itertuples()],
+        "saltos_8pct_desde_corte": {
+            "corte": str(censura.date()),
+            "conteo_por_divisa": {d: int(n) for d, n in
+                                  saltos[despues]["divisa"].value_counts().sort_index().items()}},
     }
 
 

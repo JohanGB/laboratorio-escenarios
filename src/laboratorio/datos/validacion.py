@@ -43,7 +43,10 @@ def _muestra(ix) -> list[str]:
 
 
 def validar_serie(s: pd.Series, tipo: str = "nivel",
-                  corte: pd.Timestamp | None = None) -> dict:
+                  corte: pd.Timestamp | None = None,
+                  censura: pd.Timestamp | None = None) -> dict:
+    """Validaciones de una serie. Con `censura`, los saltos con fecha ≥ censura no se muestran
+    (ni fecha ni valor): solo se cuentan en `saltos_desde_censura`."""
     s = s.dropna()
     n_total = len(s)
     dup_mask = s.index.duplicated(keep=False)
@@ -79,11 +82,16 @@ def validar_serie(s: pd.Series, tipo: str = "nivel",
         saltos = cambio[cambio.abs() > umbral].dropna()
         res["saltos_probados"] = True
         res["saltos"] = int(len(saltos))
+        if censura is not None:
+            res["censura"] = censura.date().isoformat()
+            res["saltos_desde_censura"] = int((saltos.index >= censura).sum())
+            saltos = saltos[saltos.index < censura]
         res["saltos_muestra"] = [f"{d.date()} ({v:+.3f})"
                                  for d, v in saltos.head(MUESTRA).items()]
     return res
 
 
-def validar_archivo(series: dict[str, pd.Series], corte: pd.Timestamp | None) -> dict:
-    return {nombre: validar_serie(s, tipo_serie(nombre), corte)
+def validar_archivo(series: dict[str, pd.Series], corte: pd.Timestamp | None,
+                    censura: pd.Timestamp | None = None) -> dict:
+    return {nombre: validar_serie(s, tipo_serie(nombre), corte, censura)
             for nombre, s in series.items()}

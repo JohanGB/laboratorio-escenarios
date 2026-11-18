@@ -228,8 +228,23 @@ Antes de cerrar el prerregistro, **detente** y muéstrame el borrador con las pr
 
 ## M5. Apoyo a decisiones (lo que el usuario llama «asesoría»)
 
-Generaliza `motor/casos/compra_dolares.py` sin romperlo (sus pruebas y la reproducción de las
-fichas `runs/6506dbba3261` y `runs/200b84c2c1a1` deben seguir dando «COINCIDE»).
+Generaliza `motor/casos/compra_dolares.py` sin romperlo: sus pruebas deben seguir pasando y se
+mantienen estos dos requisitos (corrección del autor, 17-nov-2026; la versión anterior exigía
+«COINCIDE» en main, lo que es imposible en cuanto cambia un `.py` de `src/`, porque
+`motor/ficha.reproducir` incluye `hash_codigo` en el hash de entrada y lanza `EntradaCambio`):
+
+a) **Reproducción exacta.** La reproducción exacta de una ficha se hace en una copia limpia del
+   commit cuyo código tiene el `hash_codigo` de la ficha: ahí
+   `python -m laboratorio.motor reproducir runs/<id>/ficha.json` da «COINCIDE». Ese commit lleva
+   la etiqueta `corrida-<id>` (`corrida-200b84c2c1a1` en `a05380b`, `corrida-6506dbba3261` en
+   `d4c6f25`); la tabla está en `docs/reproduccion.md` y el README remite a ella. Ningún
+   `ficha.json` se reescribe: son registros. Una prueba comprueba que cada ficha de
+   `runs/*/ficha.json` tiene su etiqueta y que el `hash_codigo` del árbol de ese commit es el de
+   la ficha.
+b) **No regresión en main.** Una prueba (marcada `lento`) corre el caso con la semilla y los
+   parámetros de la ficha vigente `6506dbba3261` y compara el resultado con su `resultado.json`,
+   campo por campo, con tolerancia 0, sin pasar por el chequeo de `hash_codigo`.
+   `200b84c2c1a1` queda como histórica, con reproducción solo por etiqueta.
 
 1. **Caso 2 nuevo, `pagos_multidivisa`:** una canasta de obligaciones futuras en varias divisas
    (ejemplo ilustrativo del autor: 4.000 EUR, 20.000 CNY y 3.000 USD a pagar en 6 meses).

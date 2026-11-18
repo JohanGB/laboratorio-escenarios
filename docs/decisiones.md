@@ -386,3 +386,146 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
   vio y no se repite aquí); y los conteos de días perdidos de `limpieza.json`, que abarcan
   toda la serie. No se calculó ni se
   miró ninguna otra estadística, figura ni tabla de 2020 en adelante.
+  - *Añadido el 17-nov-2026 (previos de M2)*: hasta `main` en `7cb79fc`, `data/validacion.json`
+    listaba con fecha y tamaño los saltos > 8 % desde 2020 de `divisas.csv`: uno, JPY/COP del
+    2020-03-10. Desde M2 solo da conteos: `saltos_8pct_desde_corte` (JPY: 1) y, en las seis
+    series FRED crudas, `saltos_desde_censura` (saltos > 5 % del archivo crudo desde 2020: BRL 1,
+    MXN 2, las demás 0; sin fecha ni valor). Esos conteos también se vieron.
+
+## 17-nov-2026 · Previos de M2 (revisión de M1 por el autor)
+- **Reproducción de fichas** (corrección del autor al requisito de M5): la reproducción exacta
+  se hace en el commit cuyo código tiene el `hash_codigo` de la ficha, con etiqueta
+  `corrida-<id>`; en `main` se exige no regresión (tolerancia 0) solo para la ficha vigente
+  `6506dbba3261`. Tabla y pruebas en `docs/reproduccion.md`. Ningún `ficha.json` se reescribe.
+  - `d6f052613b7a` no tiene commit posible (creada antes del primer commit, `commit` nulo); la
+    prueba de etiquetas la admite como única excepción, con esas dos condiciones comprobadas.
+  - La prueba de etiquetas no se marca `lento` (tarda menos de 1 s): así corre en la CI y una
+    ficha nueva sin etiqueta la rompe. La CI hace checkout con historial completo
+    (`fetch-depth: 0`) para tener las etiquetas. La prueba de no regresión (unos 5 s) también
+    corre en la CI; ver «Prueba 1b en la CI y fin de línea» en la sección de M2.
+- **Criterio de la alineación TRM–FRED**: se eligió el desfase con la mayor correlación **en
+  valor absoluto** entre los rendimientos logarítmicos de la TRM (COP por USD) y de «USD por X».
+  El signo negativo es el esperado: si el dólar sube frente al peso, también suele subir frente a
+  la otra divisa, y entonces «USD por X» baja. Por eso las correlaciones con desfase −1 son
+  negativas (EUR −0,231; MXN −0,291; CNY −0,201; CHF −0,110; BRL −0,378; cifras con `#hash` en
+  `reports/fase0_divisas.md`, sección 2, datos hasta el 31-dic-2019). Yen: +0,047 con desfase
+  −1 (`#0ca08c212f`, 6.670 pares).
+- **Saltos diarios > 8 % de `divisas.csv`: revisión manual** (ninguno se borra ni se ajusta).
+  «Evento documentado» significa que una fuente primaria fecha un cambio de régimen o un anuncio
+  oficial dentro del intervalo del rendimiento (del precio H.10 de la fila anterior al de la
+  fila; la TRM de *t* va con el H.10 del día hábil anterior). Es coincidencia de fechas
+  documentada, no un efecto medido. El tamaño es el cambio diario de X/COP (`#hash` de
+  `reports/fase0_divisas.md`, sección 6).
+
+  | Fecha (TRM) | Divisa | Intervalo H.10 | Tamaño | Evento documentado (fuente) | Se conserva |
+  |---|---|---|---:|---|---|
+  | 1994-01-04 | CNY | 1993-12-31 → 1994-01-03 | −33,2 % `#29d3f91346` | Unificación de los tipos de cambio de China: documento del directorio del FMI «China - Unification of Exchange Rates», EBD/94/1, 3-ene-1994 ([archivo del FMI](https://archivescatalog.imf.org/Details/archive/125118778)); la ficha del archivo no da la fecha de entrada en vigor | sí |
+  | 1994-12-21 | MXN | 1994-12-19 → 1994-12-20 | −12,3 % `#0a657f6fc7` | La Comisión de Cambios aprueba «elevar 15 por ciento el techo de la banda» la noche del 19-dic-1994 (Banco de México, *Historia del Banco de México*, t. XIX, cap. VI, [«Desplome cambiario»](https://www.banxico.org.mx/elib/hbm/19/6.html); la fecha se deduce del orden del texto) | sí |
+  | 1994-12-23 | MXN | 1994-12-21 → 1994-12-22 | −17,6 % `#b065960b27` | El peso «amaneció el referido 22 de diciembre con el sistema cambiario ya basado en la flotación libre» (misma fuente) | sí |
+  | 1994-12-28 | MXN | 1994-12-23 → 1994-12-27 | −17,9 % `#d996a2da3f` | sin explicación verificada | sí |
+  | 1995-01-04 | MXN | 1994-12-30 → 1995-01-03 | −8,6 % `#0fa832323f` | sin explicación verificada | sí |
+  | 1995-01-31 | MXN | 1995-01-27 → 1995-01-30 | −12,8 % `#edcb8ca78d` | sin explicación verificada | sí |
+  | 1995-02-01 | MXN | 1995-01-30 → 1995-01-31 | +11,8 % `#9726eefe5c` | sin explicación verificada | sí |
+  | 1995-02-23 | MXN | 1995-02-21 → 1995-02-22 | −8,1 % `#dd9a0c0d41` | sin explicación verificada | sí |
+  | 1995-03-07 | MXN | 1995-03-03 → 1995-03-06 | −8,3 % `#5fd569e8cb` | sin explicación verificada | sí |
+  | 1995-03-10 | MXN | 1995-03-08 → 1995-03-09 | −10,2 % `#e281b42364` | sin explicación verificada | sí |
+  | 1995-03-11 | MXN | 1995-03-09 → 1995-03-10 | +20,0 % `#b18ba4b32a` | sin explicación verificada | sí |
+  | 1999-01-16 | BRL | 1999-01-14 → 1999-01-15 | −10,1 % `#c04950209a` | Comunicado 6.563 del 15-ene-1999: el BCB se abstiene de operar en el mercado ese día, «suspensão temporária do regime de bandas» ([BCB, Política Cambial 1999](https://www.bcb.gov.br/rex/MerCambio/Port/cambio991/1999-1Pol%C3%ADticaCambial.asp?frame=1)) | sí |
+  | 1999-01-20 | BRL | 1999-01-15 → 1999-01-19 | −8,0 % `#464b7f7e3e` | Comunicado 6.565 del 18-ene-1999: «a partir daquela data, deixaria que o mercado definisse a taxa de câmbio» (misma fuente) | sí |
+  | 1999-02-03 | BRL | 1999-02-01 → 1999-02-02 | +8,5 % `#35b603a3f8` | sin explicación verificada | sí |
+  | 2002-08-09 | BRL | 2002-08-06 → 2002-08-08 | +9,2 % `#4a569d2d0b` | FMI, News Brief del 7-ago-2002, «IMF Managing Director Köhler Confirms Agreement with Brazil» (acuerdo de derecho de giro con US$30.000 millones adicionales) ([FMI](https://www.imf.org/external/np/sec/nb/2002/nb0285.htm)) | sí |
+  | 2008-10-07 | JPY | 2008-10-03 → 2008-10-06 | +8,8 % `#76a3cb9db1` | sin explicación verificada | sí |
+  | 2011-09-07 | CHF | 2011-09-02 → 2011-09-06 | −8,0 % `#da27a72e3a` | BNS, 6-sep-2011, «Swiss National Bank sets minimum exchange rate at CHF 1.20 per euro» ([BNS](https://www.snb.ch/en/publications/communication/press-releases/2011/pre_20110906)) | sí |
+  | 2015-01-16 | CHF | 2015-01-14 → 2015-01-15 | +12,0 % `#b16684b8c5` | BNS, 15-ene-2015, «Swiss National Bank discontinues minimum exchange rate and lowers interest rate to -0.75%» ([BNS](https://www.snb.ch/en/mmr/reference/pre_20150115)) | sí |
+
+  Desde el 2020-01-01 (sin fecha ni tamaño, solo conteo por divisa): JPY 1; EUR, MXN, CNY,
+  CHF y BRL 0. Se conservan. Las fuentes se consultaron el 17-nov-2026; la página del BCB dice
+  en su primera frase que la flotación rige «a partir de 15 de Janeiro de 1999», pero fecha el
+  Comunicado 6.565 el 18-01-1999: la tabla usa la fecha de cada comunicado.
+- **Regla desde ahora**: ninguna salida, validación ni registro de M1-M2 da valores de las
+  divisas nuevas con fecha ≥ 2020-01-01; solo conteos. `python -m laboratorio.datos` aplica
+  `divisas.CORTE_VISTO` a `divisas.csv` y a las seis series FRED crudas;
+  `tests/test_divisas.py` lo verifica sobre `data/validacion.json`.
+- **Prevención de H5**: `motor/ficha.registrar` (lo usa `compra_dolares.ejecutar`; todo caso
+  futuro debe usarla en lugar de `guardar`) no escribe la ficha si `git status` muestra cambios
+  sin commit, incluidos archivos nuevos, en `src/` o `data/` (`data/supuestos/` incluido), o si
+  la carpeta no es un repositorio git. Al guardar, crea la etiqueta anotada `corrida-<id>` en HEAD;
+  si ya existe (misma corrida) la deja. El caso lo comprueba antes de calcular y otra vez después
+  de sembrar supuestos: si `sembrar` o `--actualizar-derivas` escribe en el registro, se niega con
+  un mensaje que pide hacer commit del registro y volver a correr. La CLI devuelve código 3 con
+  el mensaje. `data/processed/` está ignorado por git (se reconstruye desde `data/raw`), así que
+  no cuenta como cambio. Descartado: hacer commit automático (tocaría el historial del autor).
+
+## 17-nov-2026 · M2 (motor conjunto multidivisa)
+- **Refactorización de `modelos/bootstrap.trayectorias`** en `indices_bloques` (antes
+  `indices_estacionarios`, que queda como alias) y `aplicar_indices` (una serie `(n,)` o varias
+  `(n, k)` con los mismos índices). Ningún número cambió: tres huellas SHA-256 de la salida
+  anterior (entradas exactas, sin depender de la plataforma) y la prueba de no regresión de la
+  ficha `6506dbba3261` pasan con el código nuevo; con una sola serie, `aplicar_indices` y
+  `simular_conjunto(("USD",))` reproducen `trayectorias` bit a bit.
+- **`motor/conjunto.simular_conjunto`**: factores TRM y «USD por X» (= X/COP ÷ TRM en la misma
+  fecha de TRM de `divisas.csv`), fechas comunes sin relleno, un rendimiento de una fecha común a
+  la siguiente (puede abarcar un festivo de EE. UU.), una sola secuencia de índices para todos.
+  X/COP = suma de logaritmos: triangulación exacta (prueba con tolerancia relativa 1e-12).
+  Generador `default_rng([semilla, n_fechas − 1])`. Etiqueta en el objeto y en el reporte:
+  «motor conjunto, sin evaluación fuera de muestra hasta M3». `montecarlo.simular` no cambia.
+- **Muestra común**: primera fecha posterior a la última fila con régimen `fijo`, `banda` o
+  `banda_cop` de cada divisa de la corrida (USD incluido, así nunca entra la banda colombiana).
+  Con CNY es el 2005-07-23 (TRM del sábado con el H.10 del viernes 22-jul-2005). El piso suizo
+  (2011-2015) queda dentro: es un episodio con la divisa cotizando, no un régimen sin flotación.
+  Un `desde` anterior a la muestra común es un error.
+- **Variante filtrada**: cada factor con su propia σ EWMA (0,94), su σ̄² y su ρ, calculadas solo
+  con los rendimientos de la muestra común (arranque de la EWMA como en `varianza_ewma`).
+  Lectura conservadora: nada anterior a la muestra entra, ni siquiera como calentamiento.
+- **Bloque común**: Politis-White de la TRM en la muestra común (máximo entre la serie y su
+  valor absoluto, como `ajustar`). La alternativa `bloque="mediana"` (mediana de los factores de
+  la corrida) está implementada y probada, pero no se reporta hasta M3: depende de las series de
+  las divisas nuevas hasta el origen.
+- **Correlación de la variante filtrada: supuesto CCC (decisión del autor, 17-nov-2026).** La
+  prueba 6 (±0,05 frente a la correlación histórica) pasa con `bootstrap_est` (0,008 como máximo,
+  origen 2019-12-31, 10.000 trayectorias) y no con `bootstrap_est_filtrado` (0,194). No es un
+  error: el motor filtrado supone correlación condicional constante (CCC; Bollerslev, 1990).
+  Remuestrea los choques estandarizados con su correlación y reescala cada factor con su σ del
+  origen; eso no cambia la correlación de los factores, pero sí la de los cruces X/COP, que
+  depende del peso de cada factor en la suma. Comparar con la correlación incondicional era el
+  criterio equivocado (error del prompt, según el autor). Se descartan reescalar con una σ común
+  (anula el filtrado, decisión ad hoc) y probar solo `bootstrap_est` (deja sin probar el motor
+  principal). Pruebas de la variante filtrada:
+  - factores, 21 pasos, 10.000 trayectorias: a ±0,005 de R_z (máximo medido 0,00498);
+  - cruces, paso 1: a ±0,01 de la correlación implícita (`conjunto.correlaciones_paso1`).
+  **Dos desviaciones respecto de lo pedido en esta segunda prueba**, sin aflojar la tolerancia:
+  (1) la implícita usa la covarianza de los choques, Σ = D·C_z·D con C_z = S·R_z·S, y no
+  D·R_z·D. El desvío de los z no es 1 (el del yuan es 1,46 con datos hasta 2019) y el remuestreo
+  lo conserva; con R_z la «implícita» se aparta hasta 0,042 de la exacta y la prueba no
+  convergería nunca (0,044 con 200.000 trayectorias). (2) Se usan 200.000 trayectorias con un
+  solo paso (cuesta 0,1 s), no 10.000: con 10.000 el error de Monte Carlo de una correlación en
+  un solo paso es del orden de 0,01, y el máximo en 21 pares fue 0,025, así que ±0,01 no se
+  puede comprobar a ese tamaño. Con 200.000 la diferencia máxima es 0,002. El reporte tiene la
+  tabla (histórica, choques sin reescalar, implícita, simulada) con datos hasta 2019-12-31 y la
+  limitación: la correlación se supone constante y en episodios de estrés puede no serlo.
+  Para M3: la cobertura de la canasta se prerregistra para ambas variantes (filtrada principal,
+  `bootstrap_est` sensibilidad, como en el caso 1).
+- **Reporte `reports/m2_conjunto.md`** (solo TRM; prueba de que ninguna línea con cifra nombra
+  una divisa nueva): mismo origen (2026-11-14), semilla y 10.000 trayectorias. El conjunto da una
+  mediana más baja que el motor evaluado (−6,4 % a 252 días) y bandas algo más estrechas (0,89
+  veces a 252); la deriva con que entra cada muestra es 0,0110 % diario frente a 0,0358 %
+  (cifras con `#hash` en el reporte), coherente con F5b: la banda arrastra la deriva.
+- **Sin cifras de divisas nuevas desde 2020**: las pruebas de M2 con datos reales usan origen
+  2019-12-31. El reporte solo muestra la TRM, salvo la sección 4 (correlaciones), que usa datos
+  hasta 2019-12-31; una prueba lo comprueba línea por línea, también en el apéndice.
+- **Prueba 1b en la CI y fin de línea.** La no regresión de `6506dbba3261` se había marcado
+  `lento` porque falló en la CI. Se quitó la marca (decisión del autor: `lento` es solo por
+  tiempo, y esta prueba es justo lo que la CI debe vigilar). Ahora compara todos los valores
+  numéricos y textos de `resultado.json` con tolerancia 0, excluyendo solo los campos que son
+  hashes de archivo (claves `hash`/`hash_*` o cadenas de 64 hexadecimales; hoy
+  `resultado.json` no tiene ninguno). «Mismos datos» se comprueba archivo por archivo con el
+  hash tal cual o, si no coincide, con el contenido llevado a CRLF. Una prueba aparte comprueba
+  que los hashes de archivo coinciden tal cual cuando el archivo tiene CRLF (Windows) y que, en
+  otro caso, la única diferencia es el fin de línea.
+- **Limitación de fondo (sin corregir en M2):** `motor/ficha.hash_archivo` depende del fin de
+  línea, así que los mismos datos dan hashes distintos en Windows (CRLF) y en Linux (LF): el
+  `trm.csv` procesado de la ficha vigente da `641393c5…` en Windows y `b985843a…` con LF.
+  Corrección propuesta, en un PR aparte después de fusionar M2: normalizar CRLF→LF en
+  `motor/ficha.hash_archivo`, igual que ya hace `hash_codigo`, solo para fichas nuevas (las viejas
+  se reproducen por su etiqueta). `backtest/ejecucion.hash_archivo` NO se toca: es el del
+  prerregistro de la prueba final.

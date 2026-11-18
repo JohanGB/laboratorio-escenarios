@@ -12,7 +12,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from .ficha import EntradaCambio
+from .ficha import ArbolSucio, EntradaCambio
 
 
 def main(argv=None) -> int:
@@ -61,11 +61,16 @@ def main(argv=None) -> int:
     from . import montecarlo
     from .casos import compra_dolares as caso
     if args.cmd == "compra_dolares":
-        ficha, ruta_ficha, ruta_rep = caso.ejecutar(
-            args.raiz, args.autor, args.actualizar_derivas,
-            montecarlo.TRAYECTORIAS if args.trayectorias is None else args.trayectorias,
-            montecarlo.SEMILLA if args.semilla is None else args.semilla)
+        try:
+            ficha, ruta_ficha, ruta_rep = caso.ejecutar(
+                args.raiz, args.autor, args.actualizar_derivas,
+                montecarlo.TRAYECTORIAS if args.trayectorias is None else args.trayectorias,
+                montecarlo.SEMILLA if args.semilla is None else args.semilla)
+        except ArbolSucio as e:
+            print(str(e), file=sys.stderr)
+            return 3
         print(f"corrida      {ficha.run_id}")
+        print(f"etiqueta     corrida-{ficha.run_id} en {ficha.commit}")
         print(f"ficha        {ruta_ficha}")
         print(f"reporte      {ruta_rep}")
         print(f"trayectorias {ficha.parametros['trayectorias']}  semilla {ficha.semilla}")

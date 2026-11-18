@@ -5,6 +5,10 @@ hash_resultado = H(resultado normalizado)
 hash_ficha    = H(hash_entrada, hash_resultado)
 No entran en ningún hash: la fecha de creación, el entorno (versiones) ni el commit de git;
 se guardan solo como información.
+
+Desde M2 (prevención del hallazgo H5), `registrar` solo escribe la ficha si no hay cambios sin
+commit en src/ ni data/, y crea la etiqueta `corrida-<id>` en HEAD: la reproducción exacta se
+hace en ese commit (docs/reproduccion.md).
 """
 from __future__ import annotations
 
@@ -46,6 +50,38 @@ def hash_codigo(raiz: str | Path) -> str:
             continue
         contenido = p.read_bytes().replace(b"\r\n", b"\n")
         partes.append([p.relative_to(raiz).as_posix(), hashlib.sha256(contenido).hexdigest()])
+    return sha256_texto(canonico(partes))
+
+
+def hash_codigo_commit(repo: str | Path, commit: str, sub: str = "src/laboratorio") -> str:
+    """`hash_codigo` del árbol de `commit` bajo `sub`, leído con git (sin checkout).
+
+    Mismo cálculo que `hash_codigo`: los .py fuera de __pycache__, ruta relativa a `sub`,
+    contenido con CRLF -> LF, y el mismo orden (el de `Path`).
+    """
+    def git(*args, entrada: bytes | None = None) -> bytes:
+        r = subprocess.run(["git", "-C", str(repo), *args], input=entrada, capture_output=True)
+        if r.returncode != 0:
+            raise RuntimeError(f"git {' '.join(args)}: {r.stderr.decode(errors='replace').strip()}")
+        return r.stdout
+
+    filas = git("ls-tree", "-r", "-z", commit, "--", sub).split(b"\0")
+    blobs = {}
+    for fila in filter(None, filas):
+        meta, ruta = fila.split(b"\t", 1)
+        modo, tipo, sha = meta.split()
+        ruta = ruta.decode("utf-8")
+        if tipo == b"blob" and ruta.endswith(".py") and "__pycache__" not in ruta.split("/"):
+            blobs[ruta[len(sub) + 1:]] = sha.decode()
+    salida = git("cat-file", "--batch", entrada="".join(f"{s}\n" for s in blobs.values()).encode())
+    contenidos, i = {}, 0
+    for rel, sha in blobs.items():
+        fin = salida.index(b"\n", i)
+        tamano = int(salida[i:fin].split()[2])
+        contenidos[rel] = salida[fin + 1: fin + 1 + tamano]
+        i = fin + 1 + tamano + 1
+    partes = [[rel, hashlib.sha256(contenidos[rel].replace(b"\r\n", b"\n")).hexdigest()]
+              for rel in sorted(contenidos, key=Path)]
     return sha256_texto(canonico(partes))
 
 
@@ -160,6 +196,72 @@ def cargar(ruta: str | Path) -> Ficha:
 
 class EntradaCambio(RuntimeError):
     """Los datos, supuestos o el código ya no son los de la ficha."""
+
+
+# --- registro con commit limpio (prevención del hallazgo H5) ------------------------------------
+CARPETAS_VERSIONADAS = ("src", "data")      # data/ incluye data/supuestos/ y data/raw/
+PREFIJO_ETIQUETA = "corrida-"
+
+
+class ArbolSucio(RuntimeError):
+    """No se escribe la ficha: hay cambios sin commit (o no hay git) y su commit no la reproduciría."""
+
+
+def _git(raiz: str | Path, *args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", "-C", str(raiz), *args], capture_output=True, text=True,
+                          encoding="utf-8", timeout=60)
+
+
+def cambios_sin_commit(raiz: str | Path, carpetas=CARPETAS_VERSIONADAS) -> list[str]:
+    """Líneas de `git status --porcelain` (incluye archivos nuevos) bajo `carpetas`."""
+    r = _git(raiz, "status", "--porcelain", "--untracked-files=all", "--", *carpetas)
+    if r.returncode != 0:
+        raise ArbolSucio(f"{Path(raiz).resolve()} no es un repositorio git: la ficha no tendría un "
+                         "commit con su código y sus datos. No se escribió la ficha.")
+    return [l for l in r.stdout.splitlines() if l.strip()]
+
+
+def exigir_arbol_limpio(raiz: str | Path, contexto: str = "") -> None:
+    sucios = cambios_sin_commit(raiz)
+    if not sucios:
+        return
+    lista = "\n".join(f"  {l}" for l in sucios[:15]) + ("\n  …" if len(sucios) > 15 else "")
+    pista = ""
+    if any("registro.jsonl" in l for l in sucios):
+        pista = ("\nSi el registro cambió en esta misma ejecución (supuestos sembrados o "
+                 "--actualizar-derivas), haga commit de data/supuestos/registro.jsonl y vuelva a "
+                 "correr sin --actualizar-derivas.")
+    raise ArbolSucio(
+        f"No se escribió la ficha{contexto}: hay cambios sin commit en src/ o data/:\n{lista}\n"
+        "La ficha debe apuntar a un commit que contenga su código, sus datos y sus supuestos "
+        f"(hallazgo H5, docs/reproduccion.md). Haga commit y vuelva a correr.{pista}")
+
+
+def etiquetar(raiz: str | Path, run_id: str, commit: str) -> str:
+    """Crea la etiqueta `corrida-<run_id>` en `commit`. Si ya existe, la deja como está."""
+    nombre = PREFIJO_ETIQUETA + run_id
+    if _git(raiz, "rev-parse", "--verify", "--quiet", f"{nombre}^{{commit}}").returncode == 0:
+        return nombre          # misma corrida (mismo hash de entrada, mismo código): ya etiquetada
+    r = _git(raiz, "tag", "-a", nombre, commit, "-m",
+             f"Corrida {run_id}: commit cuyo código tiene el hash_codigo de runs/{run_id}/ficha.json")
+    if r.returncode != 0:
+        raise RuntimeError(f"no se pudo crear la etiqueta {nombre}: {r.stderr.strip()}")
+    return nombre
+
+
+def registrar(ficha: Ficha, resultado, raiz: str | Path) -> Path:
+    """Guarda la ficha en `raiz/runs` SOLO con el árbol limpio y la etiqueta en HEAD.
+
+    Todo caso que escriba fichas debe usar esta función, no `guardar` directamente.
+    """
+    exigir_arbol_limpio(raiz)
+    head = commit_git(raiz)
+    if not head or ficha.commit != head:
+        raise ArbolSucio(f"No se escribió la ficha: HEAD ({head}) no es el commit con que se "
+                         f"construyó ({ficha.commit}).")
+    ruta = guardar(ficha, resultado, Path(raiz) / "runs")
+    etiquetar(raiz, ficha.run_id, head)
+    return ruta
 
 
 def reproducir(ficha: Ficha, ejecutar: Callable[[Ficha], object],

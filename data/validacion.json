@@ -940,7 +940,9 @@
         "1999-01-25 (+0.053)"
       ],
       "saltos_probados": true,
-      "mediana_dias": 1.0
+      "mediana_dias": 1.0,
+      "censura": "2020-01-01",
+      "saltos_desde_censura": 1
     }
   },
   "chf_fred_dexszus_20261117.csv": {
@@ -964,7 +966,9 @@
         "2015-01-15 (-0.122)"
       ],
       "saltos_probados": true,
-      "mediana_dias": 1.0
+      "mediana_dias": 1.0,
+      "censura": "2020-01-01",
+      "saltos_desde_censura": 0
     }
   },
   "cny_fred_dexchus_20261117.csv": {
@@ -992,7 +996,9 @@
         "1994-01-03 (+0.500)"
       ],
       "saltos_probados": true,
-      "mediana_dias": 1.0
+      "mediana_dias": 1.0,
+      "censura": "2020-01-01",
+      "saltos_desde_censura": 0
     }
   },
   "dolar_amplio_fred_dtwexbgs_20261114.csv": {
@@ -1029,7 +1035,9 @@
       "saltos": 0,
       "saltos_muestra": [],
       "saltos_probados": true,
-      "mediana_dias": 1.0
+      "mediana_dias": 1.0,
+      "censura": "2020-01-01",
+      "saltos_desde_censura": 0
     }
   },
   "fed_funds_fred_dff_20261114.csv": {
@@ -1091,7 +1099,9 @@
         "2008-10-24 (-0.051)"
       ],
       "saltos_probados": true,
-      "mediana_dias": 1.0
+      "mediana_dias": 1.0,
+      "censura": "2020-01-01",
+      "saltos_desde_censura": 0
     }
   },
   "mxn_fred_dexmxus_20261117.csv": {
@@ -1114,7 +1124,9 @@
         "1994-12-29 (-0.065)"
       ],
       "saltos_probados": true,
-      "mediana_dias": 1.0
+      "mediana_dias": 1.0,
+      "censura": "2020-01-01",
+      "saltos_desde_censura": 2
     }
   },
   "trm_banrep_20261114.xlsx": {
@@ -1385,12 +1397,6 @@
         "regimen": "flotacion"
       },
       {
-        "fecha": "2020-03-10",
-        "divisa": "JPY",
-        "cambio_pct": 8.9978,
-        "regimen": "flotacion"
-      },
-      {
         "fecha": "1994-01-04",
         "divisa": "CNY",
         "cambio_pct": -33.202,
@@ -1432,6 +1438,12 @@
         "cambio_pct": 9.2265,
         "regimen": "flotacion"
       }
-    ]
+    ],
+    "saltos_8pct_desde_corte": {
+      "corte": "2020-01-01",
+      "conteo_por_divisa": {
+        "JPY": 1
+      }
+    }
   }
 }

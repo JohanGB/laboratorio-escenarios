@@ -189,12 +189,12 @@ def test_dias_perdidos_por_divisa_en_el_log():
 
 # --- validaciones --------------------------------------------------------------------------------
 def test_validacion_lista_los_saltos_y_no_borra_nada():
-    df = pd.DataFrame({"fecha": pd.to_datetime(["2024-01-02", "2024-01-03", "2024-01-04"]),
+    df = pd.DataFrame({"fecha": pd.to_datetime(["2014-01-02", "2014-01-03", "2014-01-04"]),
                        "divisa": "BRL", "cop_por_unidad": [100.0, 110.0, 109.0],
                        "ret_log": [np.nan, np.log(1.1), np.log(109 / 110)], "regimen": "flotacion"})
     v = D.validar_divisas(df)
     assert v["positivos"] and v["duplicados"] == 0 and v["filas"] == 3
-    assert [s["fecha"] for s in v["saltos_8pct"]] == ["2024-01-03"]
+    assert [s["fecha"] for s in v["saltos_8pct"]] == ["2014-01-03"]
     assert len(df) == 3
 
 
@@ -203,3 +203,58 @@ def test_validacion_en_data_validacion_json():
     d = v["processed/divisas.csv"]
     assert d["positivos"] and d["duplicados"] == 0
     assert all(abs(s["cambio_pct"]) > 8 for s in d["saltos_8pct"])
+
+
+# --- desde 2020: de las divisas nuevas solo conteos (revisión de M1, 17-nov-2026) ----------------
+_FECHA = __import__("re").compile(r"(\d{4})-\d{2}-\d{2}")
+
+
+def _elementos_con_fecha_desde_corte(obj):
+    """Elementos de listas (texto o dict) que mencionan una fecha ≥ 2020-01-01."""
+    if isinstance(obj, dict):
+        for v in obj.values():
+            yield from _elementos_con_fecha_desde_corte(v)
+    elif isinstance(obj, list):
+        for x in obj:
+            texto = json.dumps(x, ensure_ascii=False)
+            if any(int(a) >= D.CORTE_VISTO.year for a in _FECHA.findall(texto)):
+                yield x
+            yield from _elementos_con_fecha_desde_corte(x)
+
+
+def test_validacion_no_lista_saltos_desde_2020_solo_los_cuenta():
+    df = pd.DataFrame({"fecha": pd.to_datetime(["2019-12-30", "2019-12-31", "2021-03-01",
+                                                "2021-03-02"]),
+                       "divisa": "JPY", "cop_por_unidad": [100.0, 110.0, 111.0, 125.0],
+                       "ret_log": [np.nan, np.log(1.1), np.log(111 / 110), np.log(125 / 111)],
+                       "regimen": "flotacion"})
+    v = D.validar_divisas(df)
+    assert [s["fecha"] for s in v["saltos_8pct"]] == ["2019-12-31"]
+    assert v["saltos_8pct_desde_corte"] == {"corte": "2020-01-01", "conteo_por_divisa": {"JPY": 1}}
+    assert "2021" not in json.dumps(v)
+
+
+def test_validar_serie_con_censura_no_muestra_saltos_desde_el_corte():
+    from laboratorio.datos.validacion import validar_serie
+    s = pd.Series([1.0, 1.2, 1.21, 1.5, 1.51],
+                  index=pd.to_datetime(["2019-12-26", "2019-12-27", "2019-12-30", "2020-01-02",
+                                        "2020-01-03"]))
+    r = validar_serie(s, "nivel", censura=D.CORTE_VISTO)
+    assert r["saltos"] == 2 and r["saltos_desde_censura"] == 1
+    assert len(r["saltos_muestra"]) == 1 and r["saltos_muestra"][0].startswith("2019-12-27")
+    assert validar_serie(s, "nivel")["saltos_muestra"][1].startswith("2020-01-02")   # sin censura
+
+
+def test_data_validacion_json_no_da_valores_de_divisas_nuevas_desde_2020():
+    v = json.loads((RAIZ / "data" / "validacion.json").read_text(encoding="utf-8"))
+    d = v["processed/divisas.csv"]
+    assert all(s["fecha"] < "2020-01-01" for s in d["saltos_8pct"])
+    assert d["saltos_8pct_desde_corte"]["corte"] == "2020-01-01"
+    assert all(isinstance(n, int) for n in d["saltos_8pct_desde_corte"]["conteo_por_divisa"].values())
+    nuevas = {k: s for k, s in v.items() if D.es_divisa_nueva(k)}
+    assert len(nuevas) == len(DIVISAS_NUEVAS)
+    for nombre, series in nuevas.items():
+        for r in series.values():
+            assert r["censura"] == "2020-01-01" and isinstance(r["saltos_desde_censura"], int)
+    malos = list(_elementos_con_fecha_desde_corte({"d": d, **nuevas}))
+    assert not malos, f"{len(malos)} elementos con fecha ≥ 2020 en validacion.json"
