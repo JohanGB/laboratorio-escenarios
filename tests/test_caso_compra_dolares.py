@@ -17,7 +17,6 @@ from laboratorio.motor.supuestos import Registro
 
 RAIZ = Path(__file__).resolve().parents[1]
 N_MC = 300          # trayectorias del Monte Carlo en las pruebas (la corrida real usa 10.000)
-pytestmark = pytest.mark.skipif(not (RAIZ / "data/processed/trm.csv").exists(), reason="sin datos")
 
 
 @pytest.fixture(scope="module")

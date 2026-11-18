@@ -1,14 +1,11 @@
 import re
 from pathlib import Path
 
-import pytest
-
 from laboratorio.reportes.fase0 import generar
 
 PROC = Path(__file__).resolve().parents[1] / "data" / "processed"
 
 
-@pytest.mark.skipif(not (PROC / "trm.csv").exists(), reason="data/processed no disponible")
 def test_reporte_fase0_se_genera_con_max_3_graficas(tmp_path):
     md = generar(PROC, tmp_path)
     texto = md.read_text(encoding="utf-8")

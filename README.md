@@ -54,7 +54,8 @@ el reporte las presenta juntas. Se publicó el hallazgo en vez de esconderlo.
   fuera de muestra la respalda o «sin respaldo fuera de muestra».
 - **Auditoría independiente** de la prueba final (`docs/auditoria_independiente.md`): sus
   hallazgos se corrigieron o quedaron cubiertos por pruebas (`tests/test_auditoria_h1.py`).
-- 365 pruebas automáticas (`pytest`), incluidas pruebas de fuga de información.
+- 372 pruebas automáticas (`pytest`), incluidas pruebas de fuga de información; la integración
+  continua de GitHub corre todas salvo las dos marcadas como lentas.
 
 ## Ejecutarlo (Windows, PowerShell)
 
@@ -66,13 +67,16 @@ python -m laboratorio.motor compra_dolares --trayectorias 10000 --semilla 202405
 ```
 
 **Reproducir la prueba final.** La verificación de hashes (`python -m laboratorio.backtest final
---verificar`) solo pasa con el código tal como estaba al correrla. Hazlo en una copia limpia de la
-etiqueta: `git checkout prerregistro-adenda-1`. En la rama actual falla a propósito, porque el
-motor del caso cambió después de la prueba (ver `docs/decisiones.md`).
+--verificar`) solo pasa con el código y el entorno tal como estaban al correrla. Hazlo en una copia
+limpia de la etiqueta (`git checkout prerregistro-adenda-1`), con Python 3.11.9 y las versiones
+exactas de [`requirements-prueba-final.txt`](requirements-prueba-final.txt):
+`pip install -e ".[dev]" -c requirements-prueba-final.txt`. En la rama actual falla a propósito,
+porque el motor del caso cambió después de la prueba (ver `docs/decisiones.md`).
 
-Algunas pruebas se saltan si falta `data/processed` (se reconstruye desde `data/raw`, que está
-versionado). Los resultados de la prueba final (`runs/prueba_final*/`, archivos `.csv.gz`) no
-están en git por tamaño; ver `docs/decisiones.md` para verificar sus SHA-256.
+Si falta `data/processed`, las pruebas lo reconstruyen al iniciar desde `data/raw` (versionado),
+con `python -m laboratorio.datos.limpieza`; ninguna prueba se salta por falta de datos. Los
+resultados de la prueba final (`runs/prueba_final*/`, archivos `.csv.gz`) no están en git por
+tamaño; ver `docs/decisiones.md` para verificar sus SHA-256.
 
 ## Estructura
 
@@ -81,6 +85,7 @@ data/raw/            datos originales, inmutables
 data/processed/      se regenera desde raw
 data/respaldo/       resumen de la prueba final, con hash
 docs/                prerregistro, decisiones, supuestos, uso de IA, estado
+docs/prompts/        instrucciones de trabajo dadas a la IA, por versión
 reports/             fase 0 (exploración), fase 2 (desarrollo), prueba final, caso
 src/laboratorio/     datos · modelos · backtest · motor · reportes
 tests/
@@ -97,3 +102,14 @@ Documentos clave: [prerregistro](docs/prerregistro.md) · [decisiones](docs/deci
 - A 63 días o más hay muy pocas ventanas independientes; casi cualquier cobertura es «compatible».
 - Las variables externas y las tasas entran por rezago; sus revisiones no se modelan.
 - Proyecto personal de portafolio, sin respaldo de ninguna entidad financiera.
+
+## Licencia
+
+- **Código** (`src/`, `tests/` y archivos de configuración como `pyproject.toml`,
+  `requirements-prueba-final.txt` y `.github/`): [MIT](LICENSE).
+- **Reportes, documentación y figuras** (`reports/`, incluidas sus figuras, y `docs/`):
+  [CC BY 4.0](LICENSE-docs).
+- **Datos de `data/raw/`**: no les aplica ninguna de las dos. Conservan los términos de sus
+  fuentes (Superintendencia Financiera de Colombia, Banco de la República, DANE y FRED del
+  Banco de la Reserva Federal de San Luis); consúltalos en cada fuente antes de reutilizarlos.
+  Lo mismo vale para `data/processed/`, que se deriva de ellos.

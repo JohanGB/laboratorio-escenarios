@@ -268,3 +268,58 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
   archivos locales, las 12 coberturas del respaldo se recomputan idénticas desde
   `runs/prueba_final*/` y `trm.csv` es el de la prueba final. Lo importante y lo menor que no se
   corrigió queda listado en `docs/estado.md`.
+
+## 17-nov-2026 · M0 (higiene del repositorio, Vektor FX)
+- **Prompt que manda**: `docs/prompts/PROMPT_VEKTOR_FX.md`. Los cuatro prompts anteriores se
+  movieron con `git mv` a `docs/prompts/` sin editarlos (se citan entre sí por nombre, y siguen
+  juntos). `CLAUDE.md` apunta a las rutas nuevas (hay prueba de que existen).
+- **a. Instalación**: `pyproject.toml` con `[build-system]` (setuptools ≥ 61), `numpy` explícito,
+  extra `dev = [pytest, hypothesis]` y paquetes bajo `src/`. `*.egg-info/` y `build/` ignorados.
+  Ningún `.py` de `src/` cambió: `hash_codigo` no se mueve por M0.
+- **b. Número de pruebas**: 372 (365 + 7 de `tests/test_higiene.py`). `test_readme_cita_el_numero_real_de_pruebas`
+  compara el README con `pytest --collect-only -q`; cada fase que agregue pruebas debe
+  actualizar el README o esa prueba falla (es lo buscado).
+- **c. Entorno**: `requirements-prueba-final.txt` con las seis versiones de la §10 del
+  prerregistro (Python 3.11.9 en comentario: pip no lo instala). Hay prueba de que coincide con
+  la línea «Entorno:» del prerregistro. El README lo cita en «Reproducir la prueba final».
+- **e. `runs/*.log` se quedan donde están.** `docs/decisiones.md` cita `runs/o3_ram.log`;
+  moverlos rompería esa referencia sin ganar nada, y `runs/` no se ve en la portada. No se borran.
+- **g. Datos de las pruebas (I7 cerrado)**: `tests/conftest.py` reconstruye `data/processed` al
+  iniciar la sesión si falta cualquiera de sus 7 archivos, y detiene la sesión con un mensaje
+  claro (código 4) si no hay `data/raw`. Se quitaron los saltos por falta de datos de seis
+  módulos (los cinco de I7 y `test_datos.py`); hay prueba de que no vuelven. **Desviación del
+  prompt**: este pide `python -m laboratorio.datos`, pero ese comando solo escribe
+  `manifest.json` y `validacion.json`; `data/processed` lo genera `python -m
+  laboratorio.datos.limpieza` (`limpiar`). Se usa esa función. Comprobado: borrando
+  `data/processed`, la reconstrucción da los 7 archivos idénticos byte a byte.
+- **h. Integración continua**: `.github/workflows/pruebas.yml` (Ubuntu, Python 3.11). Lectura
+  conservadora: instala `.[dev]` **con `requirements-prueba-final.txt` como restricción**, para
+  que las pruebas numéricas no cambien por versiones nuevas de las bibliotecas. Marcadas
+  `lento` (> 30 s en la corrida local de 17-nov): `test_cuantiles::test_qr_con_variables…`
+  (165 s) y `test_markov::test_calibrado_en_su_proceso_generador` (35 s). La verificación de
+  hashes de la prueba final no entra en CI.
+- **f. Licencia**: pendiente de la respuesta del autor; no se creó `LICENSE`.
+
+## 17-nov-2026 · M0, ajustes del autor (nombre, licencia, flujo de ramas)
+- **Nombre público: «Vektor FX»** (decisión del autor; ya era el de la ficha del portafolio), con
+  título «Vektor FX — Laboratorio de Escenarios» (se aplica al README en M7) y repositorio
+  sugerido `vektor-fx`. El paquete sigue siendo `laboratorio`. Prompt renombrado con `git mv` a
+  `docs/prompts/PROMPT_VEKTOR_FX.md`. Se reemplazó el nombre anterior en `CLAUDE.md`,
+  `docs/decisiones.md`, `docs/estado.md` y el prompt. Ningún archivo intocable lo mencionaba
+  (`docs/prerregistro.md`, etiquetas, `runs/`): comprobado con `git grep` de las variantes con y
+  sin tilde. `hash_codigo` sin cambios (cfb1ad53…, ningún `.py` de `src/` tocado).
+- **Prompt, M1 paso 6**: el comando que genera `data/processed` es
+  `python -m laboratorio.datos.limpieza` (desviación 4 de M0, aceptada por el autor).
+- **Licencias**: `LICENSE` (MIT, Johan Esteban García Bautista, 2026) para código, pruebas y
+  configuración; `LICENSE-docs` (CC BY 4.0, texto oficial de creativecommons.org sin cambios)
+  para `reports/` y `docs/`. `data/raw/` conserva los términos de sus fuentes; el README lo dice y
+  extiende lo mismo a `data/processed/` (derivado de raw). Sin decidir: `runs/`, `data/respaldo/`
+  y `data/supuestos/` (salidas y supuestos; no están en ninguna de las dos listas del autor).
+- **Flujo**: desde M0 cada fase va en su rama (`m0-higiene`, `m1-datos`, `m2-motor`…) con PR a
+  `main`; se fusiona con merge commit (sin squash) solo con la CI en verde.
+- **Primera CI en rojo (PR #1)**: `test_backtest_infra::test_todo_modelo_del_catalogo…` falló con
+  `LightGBMError: scikit-learn is required for lightgbm.sklearn`. Dependencia no declarada desde
+  siempre (local estaba instalada). Se declara `scikit-learn` en `pyproject.toml` y se fija
+  `scikit-learn==1.8.0` en `requirements-prueba-final.txt`, la del equipo de la prueba final
+  (instalada el 26-ene-2026). No figura en el prerregistro ni en `hash_entorno`; se anota en el
+  archivo. Ninguna restricción se relajó.

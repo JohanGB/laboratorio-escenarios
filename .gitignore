@@ -4,3 +4,5 @@ __pycache__/
 runs/**/*.csv.gz
 data/processed/
 *.pyc
+*.egg-info/
+build/

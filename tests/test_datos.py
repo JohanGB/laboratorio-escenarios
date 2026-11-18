@@ -90,10 +90,6 @@ def test_manifiesto_sintetico(tmp_path):
 
 # --- datos reales ------------------------------------------------------------
 
-requiere_raw = pytest.mark.skipif(not RAW.exists(), reason="data/raw no disponible")
-
-
-@requiere_raw
 def test_trm_superfinanciera_real_sin_duplicados():
     series, filas = leer_archivo(next(RAW.glob("trm_superfinanciera_*.csv")))
     (s,) = series.values()
@@ -102,21 +98,18 @@ def test_trm_superfinanciera_real_sin_duplicados():
     assert validar_serie(s, "nivel")["duplicadas"] == 0
 
 
-@requiere_raw
 def test_trm_banrep_inicia_27_nov_1991():
     series, _ = leer_archivo(next(RAW.glob("trm_banrep_*.xlsx")))
     s = next(v for k, v in series.items() if "Dato diario" in k)
     assert s.index.min() == pd.Timestamp("1991-11-27") and abs(s.iloc[0] - 693.32) < 1e-6
 
 
-@requiere_raw
 def test_ipc_dane_real():
     series, _ = leer_archivo(next(RAW.glob("ipc_dane_*.xlsx")))
     (s,) = series.values()
     assert s.index.min() == pd.Timestamp("2003-01-31") and abs(s.iloc[0] - 50.42) < 1e-9
 
 
-@requiere_raw
 def test_cli_genera_manifest_y_validacion(tmp_path):
     assert main(["--raw", str(RAW), "--salida", str(tmp_path)]) == 0
     m = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
@@ -159,8 +152,6 @@ def test_construir_trm_retornos_y_duplicados():
 
 @pytest.fixture(scope="module")
 def procesado(tmp_path_factory):
-    if not RAW.exists():
-        pytest.skip("data/raw no disponible")
     sal = tmp_path_factory.mktemp("processed")
     log = limpiar(RAW, sal)
     return sal, log

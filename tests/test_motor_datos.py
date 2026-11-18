@@ -47,7 +47,6 @@ def test_valida_fechas_y_valores(tmp_path):
         DatosTRM(csv(tmp_path, ["2024-01-02,-1,,,f,"]), tmp_path)
 
 
-@pytest.mark.skipif(not (RAIZ / "data/processed/trm.csv").exists(), reason="sin datos")
 def test_datos_reales_incluyen_linaje_crudo():
     d = DatosTRM(RAIZ / "data/processed", RAIZ / "data/raw")
     a = d.archivos()
