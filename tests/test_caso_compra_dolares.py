@@ -33,6 +33,9 @@ def confirmar(r: Path) -> None:
     """Commit de todo lo que haya cambiado (la regla H5 exige árbol limpio para escribir fichas)."""
     if not (r / ".git").exists():
         git(r, "init", "-q")
+        for clave, valor in (("user.name", "pruebas"), ("user.email", "pruebas@ejemplo.invalid"),
+                             ("commit.gpgsign", "false"), ("tag.gpgsign", "false")):
+            git(r, "config", clave, valor)          # el repositorio temporal; la CI no tiene identidad
         (r / ".gitignore").write_text("data/processed/\nruns/\nreports/\n__pycache__/\n",
                                       encoding="utf-8")
     git(r, "add", "-A")
