@@ -386,3 +386,22 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
   vio y no se repite aquí); y los conteos de días perdidos de `limpieza.json`, que abarcan
   toda la serie. No se calculó ni se
   miró ninguna otra estadística, figura ni tabla de 2020 en adelante.
+
+## 17-nov-2026 · Previos de M2 (revisión de M1 por el autor)
+- **Reproducción de fichas** (corrección del autor al requisito de M5): la reproducción exacta
+  se hace en el commit cuyo código tiene el `hash_codigo` de la ficha, con etiqueta
+  `corrida-<id>`; en `main` se exige no regresión (tolerancia 0) solo para la ficha vigente
+  `6506dbba3261`. Tabla y pruebas en `docs/reproduccion.md`. Ningún `ficha.json` se reescribe.
+  - `d6f052613b7a` no tiene commit posible (creada antes del primer commit, `commit` nulo); la
+    prueba de etiquetas la admite como única excepción, con esas dos condiciones comprobadas.
+  - La prueba de etiquetas no se marca `lento` (tarda menos de 1 s): así corre en la CI y una
+    ficha nueva sin etiqueta la rompe. La CI hace checkout con historial completo
+    (`fetch-depth: 0`) para tener las etiquetas. La prueba de no regresión tarda unos 5 s y
+    tampoco se marca.
+- **Criterio de la alineación TRM–FRED**: se eligió el desfase con la mayor correlación **en
+  valor absoluto** entre los rendimientos logarítmicos de la TRM (COP por USD) y de «USD por X».
+  El signo negativo es el esperado: si el dólar sube frente al peso, también suele subir frente a
+  la otra divisa, y entonces «USD por X» baja. Por eso las correlaciones con desfase −1 son
+  negativas (EUR −0,231; MXN −0,291; CNY −0,201; CHF −0,110; BRL −0,378; cifras con `#hash` en
+  `reports/fase0_divisas.md`, sección 2, datos hasta el 31-dic-2019). Yen: +0,047 con desfase
+  −1 (`#0ca08c212f`, 6.670 pares).
