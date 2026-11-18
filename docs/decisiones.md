@@ -446,3 +446,12 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
   divisas nuevas con fecha ≥ 2020-01-01; solo conteos. `python -m laboratorio.datos` aplica
   `divisas.CORTE_VISTO` a `divisas.csv` y a las seis series FRED crudas;
   `tests/test_divisas.py` lo verifica sobre `data/validacion.json`.
+- **Prevención de H5**: `motor/ficha.registrar` (lo usa `compra_dolares.ejecutar`; todo caso
+  futuro debe usarla en lugar de `guardar`) no escribe la ficha si `git status` muestra cambios
+  sin commit, incluidos archivos nuevos, en `src/` o `data/` (`data/supuestos/` incluido), o si
+  la carpeta no es un repositorio git. Al guardar, crea la etiqueta anotada `corrida-<id>` en HEAD;
+  si ya existe (misma corrida) la deja. El caso lo comprueba antes de calcular y otra vez después
+  de sembrar supuestos: si `sembrar` o `--actualizar-derivas` escribe en el registro, se niega con
+  un mensaje que pide hacer commit del registro y volver a correr. La CLI devuelve código 3 con
+  el mensaje. `data/processed/` está ignorado por git (se reconstruye desde `data/raw`), así que
+  no cuenta como cambio. Descartado: hacer commit automático (tocaría el historial del autor).

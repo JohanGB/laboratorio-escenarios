@@ -30,7 +30,8 @@ from .. import montecarlo as mc_
 from ..cifras import Cifra, Reporte, formatear
 from ..datos import DatosTRM
 from ..deterministas import ESCENARIOS, correr, id_deriva
-from ..ficha import (EntradaCambio, Ficha, construir_ficha, guardar, hash_codigo,
+from ..ficha import (EntradaCambio, Ficha, construir_ficha, exigir_arbol_limpio,
+                     hash_codigo, registrar,
                      reproducir as reproducir_ficha)
 from ..historica import (DistribucionHistorica, distribucion, desplazar_meses, pasos_por_compra,
                          ratios_ventana, ratios_todas, reproducir)
@@ -725,9 +726,11 @@ def _archivos(datos: DatosTRM, p: dict[str, Path]) -> dict[str, Path]:
 def ejecutar(raiz: str | Path = ".", autor: str = "analista", actualizar_derivas: bool = False,
              trayectorias: int = mc_.TRAYECTORIAS, semilla: int = mc_.SEMILLA) -> tuple[Ficha, Path, Path]:
     p = rutas(Path(raiz))
+    exigir_arbol_limpio(raiz)                       # H5: antes de calcular nada
     datos = DatosTRM(p["procesado"], p["raw"])
     reg = Registro(p["registro"])
     sembrar(reg, datos, autor, actualizar_derivas)
+    exigir_arbol_limpio(raiz, " (el registro de supuestos cambió en esta ejecución)")
     conjunto = reg.conjunto_vigente(ids_del_caso())
     mc = {"trayectorias": int(trayectorias), "semilla": int(semilla)}
     resultado, K = calcular(datos, conjunto, mc, cargar_respaldo(p["respaldo"]))
@@ -736,7 +739,7 @@ def ejecutar(raiz: str | Path = ".", autor: str = "analista", actualizar_derivas
                              "sensibilidad": MOTOR_SENSIBILIDAD,
                              "analisis_posterior": f"{MOTOR_CASO} remuestreando solo desde historica.desde"},
                             resultado, p["codigo"])
-    ruta_ficha = guardar(ficha, resultado, p["runs"])
+    ruta_ficha = registrar(ficha, resultado, raiz)    # árbol limpio + etiqueta corrida-<id>
     ab = resultado["abanico"]
     mc_.figura_abanico(ab["trm"], ab["niveles"], ab["pasos_compra"], p["figura"],
                        f"TRM proyectada: {int(trayectorias)} trayectorias de {MOTOR_CASO}")

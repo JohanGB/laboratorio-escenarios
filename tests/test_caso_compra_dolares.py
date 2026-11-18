@@ -2,6 +2,7 @@ import json
 import math
 import re
 import shutil
+import subprocess
 from pathlib import Path
 
 import pandas as pd
@@ -10,7 +11,7 @@ import pytest
 from laboratorio.motor.casos import compra_dolares as caso
 from laboratorio.motor.datos import DatosTRM
 from laboratorio.motor.deterministas import id_deriva
-from laboratorio.motor.ficha import EntradaCambio, cargar
+from laboratorio.motor.ficha import ArbolSucio, EntradaCambio, cargar, hash_codigo_commit
 from laboratorio.motor.historica import desplazar_meses, distribucion
 from laboratorio.motor.plan import PlanCompra
 from laboratorio.motor.supuestos import Registro
@@ -19,9 +20,41 @@ RAIZ = Path(__file__).resolve().parents[1]
 N_MC = 300          # trayectorias del Monte Carlo en las pruebas (la corrida real usa 10.000)
 
 
+def git(r: Path, *args: str) -> str:
+    """git en un repositorio de prueba (identidad y firma locales al repositorio temporal)."""
+    out = subprocess.run(["git", "-C", str(r), "-c", "user.name=pruebas",
+                          "-c", "user.email=pruebas@ejemplo.invalid", "-c", "commit.gpgsign=false",
+                          "-c", "tag.gpgsign=false", *args], capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr
+    return out.stdout.strip()
+
+
+def confirmar(r: Path) -> None:
+    """Commit de todo lo que haya cambiado (la regla H5 exige árbol limpio para escribir fichas)."""
+    if not (r / ".git").exists():
+        git(r, "init", "-q")
+        (r / ".gitignore").write_text("data/processed/\nruns/\nreports/\n__pycache__/\n",
+                                      encoding="utf-8")
+    git(r, "add", "-A")
+    if git(r, "status", "--porcelain"):
+        git(r, "commit", "-q", "-m", "prueba")
+
+
+def ejecutar(r: Path, actualizar_derivas: bool = False, **kw):
+    """`caso.ejecutar` con commit previo. Si sembrar escribe supuestos, la ejecución se niega a
+    escribir la ficha (H5): se hace commit del registro y se vuelve a correr, como haría el autor."""
+    confirmar(r)
+    try:
+        return caso.ejecutar(r, actualizar_derivas=actualizar_derivas, **kw)
+    except ArbolSucio as e:
+        assert "registro.jsonl" in str(e)
+        confirmar(r)
+        return caso.ejecutar(r, **kw)
+
+
 @pytest.fixture(scope="module")
 def proyecto(tmp_path_factory):
-    """Copia mínima del proyecto: datos, código y registro vacío."""
+    """Copia mínima del proyecto en un repositorio git: datos, código y registro vacío."""
     r = tmp_path_factory.mktemp("proy")
     (r / "data/processed").mkdir(parents=True)
     (r / "data/raw").mkdir(parents=True)
@@ -30,12 +63,13 @@ def proyecto(tmp_path_factory):
         shutil.copy(p, r / "data/raw" / p.name)
     shutil.copytree(RAIZ / "src/laboratorio", r / "src/laboratorio",
                     ignore=shutil.ignore_patterns("__pycache__"))
+    confirmar(r)
     return r
 
 
 @pytest.fixture(scope="module")
 def corrida(proyecto):
-    return caso.ejecutar(proyecto, trayectorias=N_MC)
+    return ejecutar(proyecto, trayectorias=N_MC)
 
 
 def _conjunto_y_datos(proyecto):
@@ -47,7 +81,7 @@ def _conjunto_y_datos(proyecto):
 def test_01_dos_ejecuciones_dan_mismos_hashes_y_mismo_reporte(proyecto, corrida):
     ficha, _, ruta_rep = corrida
     antes = ruta_rep.read_bytes()
-    f2, _, _ = caso.ejecutar(proyecto, trayectorias=N_MC)
+    f2, _, _ = ejecutar(proyecto, trayectorias=N_MC)
     assert (f2.hash_entrada, f2.hash_resultado, f2.hash_ficha) == (
         ficha.hash_entrada, ficha.hash_resultado, ficha.hash_ficha)
     assert ruta_rep.read_bytes() == antes
@@ -134,19 +168,19 @@ def test_08_sembrar_es_idempotente(proyecto, corrida):
 def test_08b_sembrar_no_pisa_ediciones_del_usuario_y_avisa_si_los_datos_cambian(tmp_path, proyecto):
     r = tmp_path / "p"
     shutil.copytree(proyecto, r, ignore=shutil.ignore_patterns("supuestos", "runs", "reports"))
-    caso.ejecutar(r, trayectorias=N_MC)
+    ejecutar(r, trayectorias=N_MC)
     reg = Registro(r / "data/supuestos/registro.jsonl")
     reg.agregar("caso.meta_usd", 777, "USD", "manual", "edición del usuario", "analista")
-    caso.ejecutar(r, trayectorias=N_MC)                                    # no debe revertir la edición
+    ejecutar(r, trayectorias=N_MC)                                    # no debe revertir la edición
     assert reg.vigente("caso.meta_usd").valor == 777 and len(reg.historial("caso.meta_usd")) == 2
     p = r / "data/processed/trm.csv"
     df = pd.read_csv(p)
     df.loc[df.index[-3000:], "trm"] *= 1.4              # cambio grande de datos
     df.to_csv(p, index=False)
-    _, _, ruta_rep = caso.ejecutar(r, trayectorias=N_MC)                   # datos nuevos: avisa, no cambia derivas
+    _, _, ruta_rep = ejecutar(r, trayectorias=N_MC)                   # datos nuevos: avisa, no cambia derivas
     assert "**Aviso:**" in ruta_rep.read_text(encoding="utf-8")
     assert len(reg.historial(id_deriva("base"))) == 1
-    caso.ejecutar(r, actualizar_derivas=True, trayectorias=N_MC)           # ahora sí, versión nueva
+    ejecutar(r, actualizar_derivas=True, trayectorias=N_MC)           # ahora sí, versión nueva
     assert len(reg.historial(id_deriva("base"))) == 2
     assert "**Aviso:**" not in (r / "reports/compra_dolares.md").read_text(encoding="utf-8")
 
@@ -168,7 +202,7 @@ def test_10_editar_un_supuesto_crea_corrida_nueva_y_la_vieja_sigue_reproducible(
     _, reg = _conjunto_y_datos(proyecto)
     reg.agregar("caso.meta_usd", 20000, "USD", "ilustrativo (definido por el autor)",
                 "prueba de edición", "analista")
-    f2, _, _ = caso.ejecutar(proyecto, trayectorias=N_MC)
+    f2, _, _ = ejecutar(proyecto, trayectorias=N_MC)
     assert f2.hash_supuestos != ficha.hash_supuestos and f2.run_id != ficha.run_id
     assert f2.pins_supuestos["caso.meta_usd"] == 2
     assert cargar(ruta_ficha).pins_supuestos["caso.meta_usd"] == 1
@@ -286,10 +320,10 @@ def test_13_con_respaldo_cada_horizonte_cita_su_cobertura_y_la_advertencia_va_si
         tmp_path, proyecto):
     r = tmp_path / "p"
     shutil.copytree(proyecto, r, ignore=shutil.ignore_patterns("supuestos", "runs", "reports"))
-    sin, _, _ = caso.ejecutar(r, trayectorias=N_MC)
+    sin, _, _ = ejecutar(r, trayectorias=N_MC)
     (r / "data/respaldo").mkdir()
     (r / "data/respaldo/prueba_final.json").write_text(json.dumps(RESPALDO), encoding="utf-8")
-    ficha, ruta_ficha, ruta_rep = caso.ejecutar(r, trayectorias=N_MC)
+    ficha, ruta_ficha, ruta_rep = ejecutar(r, trayectorias=N_MC)
     assert "respaldo/prueba_final.json" in ficha.datos and ficha.hash_datos != sin.hash_datos
     md = ruta_rep.read_text(encoding="utf-8")
     _revisar_hashes(md)
@@ -316,7 +350,7 @@ def test_13_con_respaldo_cada_horizonte_cita_su_cobertura_y_la_advertencia_va_si
     assert "ewma_0.94" not in md                        # lo no confirmado no se cita
     ok, _ = caso.reproducir_corrida(ruta_ficha, r)
     assert ok
-    otra, _, _ = caso.ejecutar(r, trayectorias=N_MC, semilla=7)          # otra semilla: otra corrida
+    otra, _, _ = ejecutar(r, trayectorias=N_MC, semilla=7)          # otra semilla: otra corrida
     assert otra.hash_resultado != ficha.hash_resultado and otra.run_id != ficha.run_id
     (r / "data/respaldo/prueba_final.json").write_text(
         json.dumps({**RESPALDO, "nominal": 0.9}), encoding="utf-8")     # el respaldo es dato de entrada
@@ -343,7 +377,7 @@ def test_14_analisis_posterior_de_que_lado_quedo_la_trm_real_con_indicio_en_hori
     (r / "data/respaldo").mkdir()
     (r / "data/respaldo/prueba_final.json").write_text(json.dumps({**RESPALDO, "posterior": post}),
                                                        encoding="utf-8")
-    _, ruta_ficha, ruta_rep = caso.ejecutar(r, trayectorias=N_MC)
+    _, ruta_ficha, ruta_rep = ejecutar(r, trayectorias=N_MC)
     md = ruta_rep.read_text(encoding="utf-8")
     _revisar_hashes(md)
     titulo = "### Análisis posterior (no confirmatorio): de qué lado de la banda quedó la TRM real"
@@ -363,3 +397,72 @@ def test_14_analisis_posterior_de_que_lado_quedo_la_trm_real_con_indicio_en_hori
     assert "no apunta al mismo lado en todos los horizontes" in bloque  # 5 y 21 quedaron del otro lado
     ok, _ = caso.reproducir_corrida(ruta_ficha, r)
     assert ok
+
+
+# ---- prevención de H5: sin cambios sin commit, ficha + etiqueta ----------------------------------
+def _fichas(r: Path) -> set[Path]:
+    return set(r.glob("runs/*/ficha.json"))
+
+
+def test_15_arbol_limpio_escribe_ficha_y_etiqueta_corrida_en_head(tmp_path, proyecto):
+    r = tmp_path / "p"
+    shutil.copytree(proyecto, r, ignore=shutil.ignore_patterns("runs", "reports"))
+    confirmar(r)
+    caso.sembrar(Registro(r / "data/supuestos/registro.jsonl"),
+                 DatosTRM(r / "data/processed", r / "data/raw"), "analista")
+    confirmar(r)
+    head = git(r, "rev-parse", "HEAD")
+    ficha, ruta_ficha, _ = caso.ejecutar(r, trayectorias=N_MC)
+    assert ruta_ficha.exists() and ficha.commit == head
+    assert git(r, "rev-parse", f"corrida-{ficha.run_id}^{{commit}}") == head
+    assert hash_codigo_commit(r, f"corrida-{ficha.run_id}") == ficha.hash_codigo
+    etiquetas = git(r, "tag", "--list", "corrida-*")
+    caso.ejecutar(r, trayectorias=N_MC)            # misma corrida otra vez: la etiqueta ya existe
+    assert git(r, "tag", "--list", "corrida-*") == etiquetas
+
+
+@pytest.mark.parametrize("ensuciar", ["src", "data_nuevo", "supuestos"])
+def test_16_arbol_sucio_no_escribe_ficha_ni_etiqueta(tmp_path, proyecto, ensuciar):
+    r = tmp_path / "p"
+    shutil.copytree(proyecto, r, ignore=shutil.ignore_patterns("runs", "reports"))
+    caso.sembrar(Registro(r / "data/supuestos/registro.jsonl"),
+                 DatosTRM(r / "data/processed", r / "data/raw"), "analista")
+    confirmar(r)
+    if ensuciar == "src":
+        with open(r / "src/laboratorio/motor/plan.py", "a", encoding="utf-8") as f:
+            f.write("\n# cambio sin commit\n")
+    elif ensuciar == "data_nuevo":
+        (r / "data/raw/nuevo_20991231.csv").write_text("fecha,x\n", encoding="utf-8")
+    else:
+        Registro(r / "data/supuestos/registro.jsonl").agregar(
+            "caso.meta_usd", 555, "USD", "manual", "sin commit", "analista")
+    antes, etiquetas = _fichas(r), git(r, "tag", "--list", "corrida-*")
+    with pytest.raises(ArbolSucio, match="cambios sin commit"):
+        caso.ejecutar(r, trayectorias=N_MC)
+    assert _fichas(r) == antes and git(r, "tag", "--list", "corrida-*") == etiquetas
+
+
+def test_17_sembrar_que_cambia_el_registro_no_escribe_ficha(tmp_path, proyecto):
+    r = tmp_path / "p"
+    shutil.copytree(proyecto, r, ignore=shutil.ignore_patterns("supuestos", "runs", "reports"))
+    confirmar(r)                                    # registro vacío y limpio
+    etiquetas = git(r, "tag", "--list", "corrida-*")
+    with pytest.raises(ArbolSucio, match="registro de supuestos cambió"):
+        caso.ejecutar(r, trayectorias=N_MC)
+    assert not _fichas(r) and git(r, "tag", "--list", "corrida-*") == etiquetas
+
+
+def test_18_sin_git_no_escribe_ficha(tmp_path, proyecto):
+    r = tmp_path / "p"
+    shutil.copytree(proyecto, r, ignore=shutil.ignore_patterns(".git", "runs", "reports"))
+    with pytest.raises(ArbolSucio, match="no es un repositorio git"):
+        caso.ejecutar(r, trayectorias=N_MC)
+    assert not _fichas(r)
+
+
+def test_19_la_cli_explica_por_que_no_escribe_la_ficha(tmp_path, proyecto, capsys):
+    from laboratorio.motor.__main__ import main
+    r = tmp_path / "p"
+    shutil.copytree(proyecto, r, ignore=shutil.ignore_patterns(".git", "runs", "reports"))
+    assert main(["compra_dolares", "--raiz", str(r), "--trayectorias", str(N_MC)]) == 3
+    assert "No se escribió la ficha" in capsys.readouterr().err
