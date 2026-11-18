@@ -337,3 +337,50 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
   prueba, el 17-nov-2026; no es un hash prerregistrado).
 - **Para M3**: el prerregistro multidivisa debe incluir `scikit-learn` en la lista de paquetes de
   su hash de entorno.
+
+## 17-nov-2026 · M1 (datos multidivisa)
+- **Series FRED vigentes**: las seis páginas decían «Updated: Nov 16, 2026» y último dato el
+  2026-11-13; ninguna descontinuada. `curl` a la página de la serie fue rechazado por FRED; la
+  comprobación se hizo con un lector web y la descarga con `fredgraph.csv` (como las series FRED
+  existentes). Archivos nuevos en `data/raw/` con el patrón `<divisa>_fred_<id>_20261117.csv` y
+  filas nuevas al final de `data/raw/MANIFEST.csv` (filas = líneas de datos, incluidas las vacías).
+  Ningún archivo existente de `data/raw/` cambió.
+- **Prueba final intacta**: con los archivos nuevos, `limpiar` produce `trm.csv`,
+  `externas_diario.csv`, `tasas_diarias.csv`, `dtf.csv`, `ipc_mensual.csv` y `uvr_diaria.csv`
+  idénticos byte a byte (comprobado con `cmp`): los hashes de datos de la prueba final no
+  cambian. `construir_externas` elige archivos por prefijo, así que las series nuevas no entran.
+  `hash_codigo` sí cambia (código nuevo en `src/`), como ya pasaba desde F5.
+- **Alineación TRM–FRED (decisión crítica)**: desfase −1 en días de lunes a viernes (la TRM de *t*
+  con H.10 del día hábil anterior). Criterio del prompt: correlación de rendimientos con desfases
+  −1, 0 y +1, solo datos hasta el 31-dic-2019; el −1 gana en las seis divisas y en la media de
+  |r|. El rendimiento se mide entre filas consecutivas de la unión, para que TRM y H.10 cubran el
+  mismo intervalo. Para el yuan la correlación se mide desde el 2005-07-22 (con el tipo fijo su
+  rendimiento es cero). Registrado en `data/supuestos/registro.jsonl` (`divisas.desfase_fred`, con
+  los SHA-256 de los insumos) y en `docs/supuestos.md`.
+- **Régimen de cada fila**: el de la divisa en la fecha de su precio H.10 (no en la de la TRM);
+  la banda colombiana manda (`banda_cop`). Lectura conservadora: el cambio de régimen se fecha
+  cuando el precio observado ya lo refleja.
+- **USD incluido en `divisas.csv`** (filas = la TRM), para que el formato largo tenga las siete
+  divisas y la triangulación se pueda comprobar en el mismo archivo.
+- **Validación de `divisas.csv` en `data/validacion.json`** (clave `processed/divisas.csv`): la
+  calcula `python -m laboratorio.datos` en memoria desde `data/raw` (misma función que la
+  limpieza). `test_datos` ahora ignora las claves `processed/…` al comparar con `data/raw`, y
+  comprueba unicidad por (fecha, divisa) en `divisas.csv`. 19 saltos > 8 %, todos con causa
+  conocida (crisis mexicana, unificación china de 1994, devaluación brasileña, octubre de
+  2008, piso suizo); ninguno se borra.
+- **Reporte `reports/fase0_divisas.md`**: lee los datos y descarta todo lo posterior al
+  31-dic-2019 al cargarlos. Cada cifra lleva `#hash`; los insumos se hashean solo con las filas
+  anteriores al corte, así que cambiar datos posteriores no cambia el reporte (hay prueba). El
+  reporte no escribe ningún año desde 2020 (hay prueba con expresión regular). Tres figuras:
+  niveles base 100, volatilidad móvil (63 obs.) y correlaciones 2005-2014 / 2015-2019.
+- **Desviación menor**: `validacion.json` (salida de `python -m laboratorio.datos`) también lista
+  los saltos posteriores a 2019 (p. ej. el yen en marzo de 2020). Es un archivo de datos, no el
+  reporte exploratorio; se deja así para que la revisión manual sea completa.
+- **`data/raw/MANIFEST.csv`**: solo se añadieron seis filas al final, como pide M1 paso 1
+  (`git diff`: 6 inserciones, 0 borrados). No entra en ningún hash de datos publicado.
+- **Qué se vio de 2020 en adelante de las divisas nuevas (para declararlo en M3)**: al
+  comprobar que las series siguen vivas, los cinco últimos valores de cada una (9 al 13 de
+  noviembre de 2026) y la última línea de cada descarga; al revisar `validacion.json`, la lista
+  de saltos > 8 %, que incluye uno solo posterior a 2019 (JPY/COP, 2020-03-10, +9,0 %); y los
+  conteos de días perdidos de `limpieza.json`, que abarcan toda la serie. No se calculó ni se
+  miró ninguna otra estadística, figura ni tabla de 2020 en adelante.

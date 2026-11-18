@@ -183,6 +183,9 @@ def limpiar(raw: Path, salida: Path) -> dict:
         "dtf": construir_dtf(banrep, corte, log.setdefault("dtf", {})),
         "externas_diario": construir_externas(lecturas, log.setdefault("externas", {})),
     }
+    from .divisas import construir_divisas, series_fred   # M1; importación aquí para evitar el ciclo
+    salidas["divisas"] = construir_divisas(salidas["trm"]["trm"], series_fred(lecturas),
+                                           log.setdefault("divisas", {})).set_index("fecha")
     salida.mkdir(parents=True, exist_ok=True)
     for nombre, df in salidas.items():
         df.to_csv(salida / f"{nombre}.csv", date_format="%Y-%m-%d", float_format="%.10g")
