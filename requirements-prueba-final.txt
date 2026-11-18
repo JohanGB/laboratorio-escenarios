@@ -8,3 +8,6 @@ scipy==1.17.0
 statsmodels==0.15.0
 arch==9.0.0
 lightgbm==4.7.0
+# No figura en el prerregistro (ni en hash_entorno), pero LGBMRegressor la exige. Es la versión
+# del equipo donde corrió la prueba final: instalada el 26-ene-2026, antes del 16-nov-2026.
+scikit-learn==1.8.0

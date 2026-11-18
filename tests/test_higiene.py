@@ -17,7 +17,7 @@ RAIZ = Path(__file__).resolve().parents[1]
 def test_pyproject_instala_extra_dev_y_numpy():
     p = tomllib.loads((RAIZ / "pyproject.toml").read_text(encoding="utf-8"))
     assert p["build-system"]["requires"] == ["setuptools>=61"]
-    assert "numpy" in p["project"]["dependencies"]
+    assert {"numpy", "scikit-learn"} <= set(p["project"]["dependencies"])
     assert {"pytest", "hypothesis"} <= set(p["project"]["optional-dependencies"]["dev"])
 
 
@@ -28,7 +28,8 @@ def test_requirements_prueba_final_coincide_con_prerregistro():
     assert esperado.pop("python") == "3.11.9"
     req = (RAIZ / "requirements-prueba-final.txt").read_text(encoding="utf-8")
     fijadas = dict(l.split("==") for l in req.splitlines() if l and not l.startswith("#"))
-    assert fijadas == esperado
+    assert {k: fijadas.get(k) for k in esperado} == esperado
+    assert set(fijadas) - set(esperado) == {"scikit-learn"}   # exigida por lightgbm.sklearn
     assert "3.11.9" in req
     assert "requirements-prueba-final.txt" in (RAIZ / "README.md").read_text(encoding="utf-8")
 

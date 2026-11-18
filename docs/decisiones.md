@@ -317,3 +317,9 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
   y `data/supuestos/` (salidas y supuestos; no están en ninguna de las dos listas del autor).
 - **Flujo**: desde M0 cada fase va en su rama (`m0-higiene`, `m1-datos`, `m2-motor`…) con PR a
   `main`; se fusiona con merge commit (sin squash) solo con la CI en verde.
+- **Primera CI en rojo (PR #1)**: `test_backtest_infra::test_todo_modelo_del_catalogo…` falló con
+  `LightGBMError: scikit-learn is required for lightgbm.sklearn`. Dependencia no declarada desde
+  siempre (local estaba instalada). Se declara `scikit-learn` en `pyproject.toml` y se fija
+  `scikit-learn==1.8.0` en `requirements-prueba-final.txt`, la del equipo de la prueba final
+  (instalada el 26-ene-2026). No figura en el prerregistro ni en `hash_entorno`; se anota en el
+  archivo. Ninguna restricción se relajó.
