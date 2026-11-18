@@ -5,6 +5,7 @@ import argparse
 import json
 from pathlib import Path
 
+from .divisas import desde_lecturas, validar_divisas
 from .lectores import fecha_descarga, leer_archivo
 from .manifiesto import construir_manifiesto, escribir_manifiesto, listar_raw
 from .validacion import validar_archivo
@@ -21,11 +22,16 @@ def main(argv=None) -> int:
 
     informe = {r.name: validar_archivo(lecturas[r.name][0], fecha_descarga(r))
                for r in listar_raw(a.raw)}
+    informe["processed/divisas.csv"] = validar_divisas(desde_lecturas(lecturas))
     (a.salida / "validacion.json").write_text(
         json.dumps(informe, ensure_ascii=False, indent=2), encoding="utf-8")
 
     for archivo, series in informe.items():
         print(f"\n{archivo}")
+        if archivo.startswith("processed/"):
+            print(f"  filas={series['filas']} duplicados={series['duplicados']} "
+                  f"saltos>8%={len(series['saltos_8pct'])} (revisión manual, no se borran)")
+            continue
         for nombre, r in series.items():
             if r["duplicadas"] or r["huecos"] or r["saltos"] or r["fechas_futuras"]:
                 print(f"  {nombre[:58]:58} dup={r['duplicadas']} huecos={r['huecos']} "

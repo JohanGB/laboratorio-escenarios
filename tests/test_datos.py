@@ -119,7 +119,8 @@ def test_cli_genera_manifest_y_validacion(tmp_path):
         assert a["sha256"] == sha256(RAW / a["archivo"])
         assert a["filas"] > 0 and a["fecha_min"] <= a["fecha_max"]
     val = json.loads((tmp_path / "validacion.json").read_text(encoding="utf-8"))
-    assert set(val) == en_disco
+    assert {k for k in val if not k.startswith("processed/")} == en_disco
+    assert "processed/divisas.csv" in val
 
 
 # --- limpieza -----------------------------------------------------------------
@@ -173,7 +174,10 @@ def test_limpieza_sin_fechas_futuras_ni_duplicadas(procesado):
     corte = pd.Timestamp(log["fecha_corte"])
     for nombre in log["salidas"]:
         df = pd.read_csv(sal / f"{nombre}.csv", parse_dates=["fecha"], index_col="fecha")
-        assert df.index.is_unique, nombre
+        if nombre == "divisas":   # formato largo: la clave es (fecha, divisa)
+            assert not df.set_index("divisa", append=True).index.duplicated().any(), nombre
+        else:
+            assert df.index.is_unique, nombre
         if nombre != "ipc_mensual":
             assert df.index.max() <= corte, nombre
 

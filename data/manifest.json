@@ -1,5 +1,5 @@
 {
-  "generado": "2026-11-15T02:19:30+00:00",
+  "generado": "2026-11-18T01:19:02+00:00",
   "archivos": [
     {
       "archivo": "banrep_suameca_consolidado_20261114.xlsx",
@@ -24,6 +24,39 @@
       "fecha_max": "2026-11-11"
     },
     {
+      "archivo": "brl_fred_dexbzus_20261117.csv",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXBZUS",
+      "fecha_descarga": "2026-11-17",
+      "sha256": "8a02e7d8f1c468e0cbd7b28b6050aaf3c82137c8b48ddfec266cd79e096744c7",
+      "bytes": 147757,
+      "filas": 8315,
+      "series": 1,
+      "fecha_min": "1995-01-02",
+      "fecha_max": "2026-11-13"
+    },
+    {
+      "archivo": "chf_fred_dexszus_20261117.csv",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXSZUS",
+      "fecha_descarga": "2026-11-17",
+      "sha256": "922081ee3b0235be899b37b7ac38a1202e359febdb433b034659465fa8051b87",
+      "bytes": 258979,
+      "filas": 14575,
+      "series": 1,
+      "fecha_min": "1971-01-04",
+      "fecha_max": "2026-11-13"
+    },
+    {
+      "archivo": "cny_fred_dexchus_20261117.csv",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXCHUS",
+      "fecha_descarga": "2026-11-17",
+      "sha256": "44b90301458c1ed7db41d4b6e3c755a69927a7f121123b9c6baf8d916d953127",
+      "bytes": 212311,
+      "filas": 11966,
+      "series": 1,
+      "fecha_min": "1981-01-02",
+      "fecha_max": "2026-11-13"
+    },
+    {
       "archivo": "dolar_amplio_fred_dtwexbgs_20261114.csv",
       "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DTWEXBGS",
       "fecha_descarga": "2026-11-14",
@@ -33,6 +66,17 @@
       "series": 1,
       "fecha_min": "2006-01-02",
       "fecha_max": "2026-11-06"
+    },
+    {
+      "archivo": "eur_fred_dexuseu_20261117.csv",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXUSEU",
+      "fecha_descarga": "2026-11-17",
+      "sha256": "cabc808213f550bb92e70ce8742fe476127f0eae52c5063c4ca3b6419d87301b",
+      "bytes": 129193,
+      "filas": 7270,
+      "series": 1,
+      "fecha_min": "1999-01-04",
+      "fecha_max": "2026-11-13"
     },
     {
       "archivo": "fed_funds_fred_dff_20261114.csv",
@@ -55,6 +99,28 @@
       "series": 1,
       "fecha_min": "2003-01-31",
       "fecha_max": "2026-10-31"
+    },
+    {
+      "archivo": "jpy_fred_dexjpus_20261117.csv",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXJPUS",
+      "fecha_descarga": "2026-11-17",
+      "sha256": "9f3224276655f420fb4086bc5d07b0eb85e418ed71a3a8def31a846029aac9c8",
+      "bytes": 257429,
+      "filas": 14575,
+      "series": 1,
+      "fecha_min": "1971-01-04",
+      "fecha_max": "2026-11-13"
+    },
+    {
+      "archivo": "mxn_fred_dexmxus_20261117.csv",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXMXUS",
+      "fecha_descarga": "2026-11-17",
+      "sha256": "e484c8d728f48a96f1627b144f1f820b3be203fdc2c6264085de0e7c947c92a4",
+      "bytes": 159185,
+      "filas": 8615,
+      "series": 1,
+      "fecha_min": "1993-11-08",
+      "fecha_max": "2026-11-13"
     },
     {
       "archivo": "trm_banrep_20261114.xlsx",

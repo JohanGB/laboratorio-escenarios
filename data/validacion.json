@@ -918,6 +918,83 @@
       "mediana_dias": 1.0
     }
   },
+  "brl_fred_dexbzus_20261117.csv": {
+    "DEXBZUS": {
+      "tipo": "nivel",
+      "observaciones": 7992,
+      "fecha_min": "1995-01-02",
+      "fecha_max": "2026-11-13",
+      "duplicadas": 0,
+      "duplicadas_muestra": [],
+      "fechas_futuras": 0,
+      "huecos": 1,
+      "huecos_muestra": [
+        "1996-01-02 (+6 d)"
+      ],
+      "saltos": 29,
+      "saltos_muestra": [
+        "1999-01-13 (+0.091)",
+        "1999-01-15 (+0.121)",
+        "1999-01-19 (+0.081)",
+        "1999-01-21 (+0.082)",
+        "1999-01-25 (+0.053)"
+      ],
+      "saltos_probados": true,
+      "mediana_dias": 1.0
+    }
+  },
+  "chf_fred_dexszus_20261117.csv": {
+    "DEXSZUS": {
+      "tipo": "nivel",
+      "observaciones": 14009,
+      "fecha_min": "1971-01-04",
+      "fecha_max": "2026-11-13",
+      "duplicadas": 0,
+      "duplicadas_muestra": [],
+      "fechas_futuras": 0,
+      "huecos": 1,
+      "huecos_muestra": [
+        "1971-08-23 (+10 d)"
+      ],
+      "saltos": 4,
+      "saltos_muestra": [
+        "1978-01-05 (+0.060)",
+        "1978-11-01 (+0.060)",
+        "2011-09-06 (+0.093)",
+        "2015-01-15 (-0.122)"
+      ],
+      "saltos_probados": true,
+      "mediana_dias": 1.0
+    }
+  },
+  "cny_fred_dexchus_20261117.csv": {
+    "DEXCHUS": {
+      "tipo": "nivel",
+      "observaciones": 11449,
+      "fecha_min": "1981-01-02",
+      "fecha_max": "2026-11-13",
+      "duplicadas": 0,
+      "duplicadas_muestra": [],
+      "fechas_futuras": 0,
+      "huecos": 7,
+      "huecos_muestra": [
+        "1991-03-11 (+6 d)",
+        "1991-11-14 (+6 d)",
+        "1992-11-02 (+7 d)",
+        "1992-11-27 (+7 d)",
+        "1993-04-08 (+6 d)"
+      ],
+      "saltos": 4,
+      "saltos_muestra": [
+        "1986-07-07 (+0.158)",
+        "1989-12-18 (+0.269)",
+        "1990-11-19 (+0.106)",
+        "1994-01-03 (+0.500)"
+      ],
+      "saltos_probados": true,
+      "mediana_dias": 1.0
+    }
+  },
   "dolar_amplio_fred_dtwexbgs_20261114.csv": {
     "Índice dólar amplio nominal (FRED)": {
       "tipo": "nivel",
@@ -932,6 +1009,23 @@
         "2010-02-12 (+7 d)",
         "2016-01-27 (+6 d)"
       ],
+      "saltos": 0,
+      "saltos_muestra": [],
+      "saltos_probados": true,
+      "mediana_dias": 1.0
+    }
+  },
+  "eur_fred_dexuseu_20261117.csv": {
+    "DEXUSEU": {
+      "tipo": "nivel",
+      "observaciones": 6988,
+      "fecha_min": "1999-01-04",
+      "fecha_max": "2026-11-13",
+      "duplicadas": 0,
+      "duplicadas_muestra": [],
+      "fechas_futuras": 0,
+      "huecos": 0,
+      "huecos_muestra": [],
       "saltos": 0,
       "saltos_muestra": [],
       "saltos_probados": true,
@@ -973,6 +1067,54 @@
       "saltos_muestra": [],
       "saltos_probados": true,
       "mediana_dias": 31.0
+    }
+  },
+  "jpy_fred_dexjpus_20261117.csv": {
+    "DEXJPUS": {
+      "tipo": "nivel",
+      "observaciones": 14003,
+      "fecha_min": "1971-01-04",
+      "fecha_max": "2026-11-13",
+      "duplicadas": 0,
+      "duplicadas_muestra": [],
+      "fechas_futuras": 0,
+      "huecos": 1,
+      "huecos_muestra": [
+        "1971-08-31 (+18 d)"
+      ],
+      "saltos": 5,
+      "saltos_muestra": [
+        "1973-02-13 (-0.091)",
+        "1974-01-07 (+0.065)",
+        "1978-04-03 (-0.050)",
+        "1998-10-07 (-0.055)",
+        "2008-10-24 (-0.051)"
+      ],
+      "saltos_probados": true,
+      "mediana_dias": 1.0
+    }
+  },
+  "mxn_fred_dexmxus_20261117.csv": {
+    "DEXMXUS": {
+      "tipo": "nivel",
+      "observaciones": 8277,
+      "fecha_min": "1993-11-08",
+      "fecha_max": "2026-11-13",
+      "duplicadas": 0,
+      "duplicadas_muestra": [],
+      "fechas_futuras": 0,
+      "huecos": 0,
+      "huecos_muestra": [],
+      "saltos": 25,
+      "saltos_muestra": [
+        "1994-12-20 (+0.140)",
+        "1994-12-22 (+0.213)",
+        "1994-12-27 (+0.223)",
+        "1994-12-28 (-0.070)",
+        "1994-12-29 (-0.065)"
+      ],
+      "saltos_probados": true,
+      "mediana_dias": 1.0
     }
   },
   "trm_banrep_20261114.xlsx": {
@@ -1170,5 +1312,126 @@
       "saltos_probados": true,
       "mediana_dias": 1.0
     }
+  },
+  "processed/divisas.csv": {
+    "filas": 55183,
+    "positivos": true,
+    "duplicados": 0,
+    "saltos_8pct": [
+      {
+        "fecha": "1994-12-21",
+        "divisa": "MXN",
+        "cambio_pct": -12.3431,
+        "regimen": "banda_cop"
+      },
+      {
+        "fecha": "1994-12-23",
+        "divisa": "MXN",
+        "cambio_pct": -17.6125,
+        "regimen": "banda_cop"
+      },
+      {
+        "fecha": "1994-12-28",
+        "divisa": "MXN",
+        "cambio_pct": -17.9167,
+        "regimen": "banda_cop"
+      },
+      {
+        "fecha": "1995-01-04",
+        "divisa": "MXN",
+        "cambio_pct": -8.6414,
+        "regimen": "banda_cop"
+      },
+      {
+        "fecha": "1995-01-31",
+        "divisa": "MXN",
+        "cambio_pct": -12.76,
+        "regimen": "banda_cop"
+      },
+      {
+        "fecha": "1995-02-01",
+        "divisa": "MXN",
+        "cambio_pct": 11.7817,
+        "regimen": "banda_cop"
+      },
+      {
+        "fecha": "1995-02-23",
+        "divisa": "MXN",
+        "cambio_pct": -8.0815,
+        "regimen": "banda_cop"
+      },
+      {
+        "fecha": "1995-03-07",
+        "divisa": "MXN",
+        "cambio_pct": -8.2566,
+        "regimen": "banda_cop"
+      },
+      {
+        "fecha": "1995-03-10",
+        "divisa": "MXN",
+        "cambio_pct": -10.1955,
+        "regimen": "banda_cop"
+      },
+      {
+        "fecha": "1995-03-11",
+        "divisa": "MXN",
+        "cambio_pct": 20.004,
+        "regimen": "banda_cop"
+      },
+      {
+        "fecha": "2008-10-07",
+        "divisa": "JPY",
+        "cambio_pct": 8.8271,
+        "regimen": "flotacion"
+      },
+      {
+        "fecha": "2020-03-10",
+        "divisa": "JPY",
+        "cambio_pct": 8.9978,
+        "regimen": "flotacion"
+      },
+      {
+        "fecha": "1994-01-04",
+        "divisa": "CNY",
+        "cambio_pct": -33.202,
+        "regimen": "banda_cop"
+      },
+      {
+        "fecha": "2011-09-07",
+        "divisa": "CHF",
+        "cambio_pct": -8.0404,
+        "regimen": "piso"
+      },
+      {
+        "fecha": "2015-01-16",
+        "divisa": "CHF",
+        "cambio_pct": 12.0455,
+        "regimen": "flotacion"
+      },
+      {
+        "fecha": "1999-01-16",
+        "divisa": "BRL",
+        "cambio_pct": -10.1257,
+        "regimen": "banda_cop"
+      },
+      {
+        "fecha": "1999-01-20",
+        "divisa": "BRL",
+        "cambio_pct": -8.0452,
+        "regimen": "banda_cop"
+      },
+      {
+        "fecha": "1999-02-03",
+        "divisa": "BRL",
+        "cambio_pct": 8.4922,
+        "regimen": "banda_cop"
+      },
+      {
+        "fecha": "2002-08-09",
+        "divisa": "BRL",
+        "cambio_pct": 9.2265,
+        "regimen": "flotacion"
+      }
+    ]
   }
 }

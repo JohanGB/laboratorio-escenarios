@@ -14,7 +14,7 @@ RAIZ = Path(__file__).resolve().parents[1]
 RAW = RAIZ / "data" / "raw"
 PROC = RAIZ / "data" / "processed"
 PROCESADOS = ("trm.csv", "ipc_mensual.csv", "uvr_diaria.csv", "tasas_diarias.csv", "dtf.csv",
-              "externas_diario.csv", "limpieza.json")
+              "externas_diario.csv", "divisas.csv", "limpieza.json")
 
 
 class SinDatos(RuntimeError):

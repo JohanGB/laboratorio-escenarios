@@ -6,3 +6,9 @@ trm_banrep_20261114.xlsx,https://suameca.banrep.gov.co/descarga-multiple-de-dato
 brent_fred_dcoilbrenteu_20261114.csv,https://fred.stlouisfed.org/graph/fredgraph.csv?id=DCOILBRENTEU,2026-11-14,,,
 dolar_amplio_fred_dtwexbgs_20261114.csv,https://fred.stlouisfed.org/graph/fredgraph.csv?id=DTWEXBGS,2026-11-14,,,
 fed_funds_fred_dff_20261114.csv,https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFF,2026-11-14,,,
+eur_fred_dexuseu_20261117.csv,https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXUSEU,2026-11-17,cabc808213f550bb92e70ce8742fe476127f0eae52c5063c4ca3b6419d87301b,7270,1999-01-04..2026-11-13
+mxn_fred_dexmxus_20261117.csv,https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXMXUS,2026-11-17,e484c8d728f48a96f1627b144f1f820b3be203fdc2c6264085de0e7c947c92a4,8615,1993-11-08..2026-11-13
+jpy_fred_dexjpus_20261117.csv,https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXJPUS,2026-11-17,9f3224276655f420fb4086bc5d07b0eb85e418ed71a3a8def31a846029aac9c8,14575,1971-01-04..2026-11-13
+cny_fred_dexchus_20261117.csv,https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXCHUS,2026-11-17,44b90301458c1ed7db41d4b6e3c755a69927a7f121123b9c6baf8d916d953127,11966,1981-01-02..2026-11-13
+chf_fred_dexszus_20261117.csv,https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXSZUS,2026-11-17,922081ee3b0235be899b37b7ac38a1202e359febdb433b034659465fa8051b87,14575,1971-01-04..2026-11-13
+brl_fred_dexbzus_20261117.csv,https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXBZUS,2026-11-17,8a02e7d8f1c468e0cbd7b28b6050aaf3c82137c8b48ddfec266cd79e096744c7,8315,1995-01-02..2026-11-13
