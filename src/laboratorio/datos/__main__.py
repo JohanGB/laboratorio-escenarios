@@ -5,7 +5,7 @@ import argparse
 import json
 from pathlib import Path
 
-from .divisas import desde_lecturas, validar_divisas
+from .divisas import CORTE_VISTO, desde_lecturas, es_divisa_nueva, validar_divisas
 from .lectores import fecha_descarga, leer_archivo
 from .manifiesto import construir_manifiesto, escribir_manifiesto, listar_raw
 from .validacion import validar_archivo
@@ -20,7 +20,9 @@ def main(argv=None) -> int:
     lecturas = {r.name: leer_archivo(r) for r in listar_raw(a.raw)}
     escribir_manifiesto(construir_manifiesto(a.raw, lecturas), a.salida / "manifest.json")
 
-    informe = {r.name: validar_archivo(lecturas[r.name][0], fecha_descarga(r))
+    # Divisas nuevas: desde CORTE_VISTO, solo conteos (ningún valor; ver divisas.CORTE_VISTO).
+    informe = {r.name: validar_archivo(lecturas[r.name][0], fecha_descarga(r),
+                                       CORTE_VISTO if es_divisa_nueva(r.name) else None)
                for r in listar_raw(a.raw)}
     informe["processed/divisas.csv"] = validar_divisas(desde_lecturas(lecturas))
     (a.salida / "validacion.json").write_text(
@@ -30,7 +32,10 @@ def main(argv=None) -> int:
         print(f"\n{archivo}")
         if archivo.startswith("processed/"):
             print(f"  filas={series['filas']} duplicados={series['duplicados']} "
-                  f"saltos>8%={len(series['saltos_8pct'])} (revisión manual, no se borran)")
+                  f"saltos>8%={len(series['saltos_8pct'])} antes de "
+                  f"{series['saltos_8pct_desde_corte']['corte']} y "
+                  f"{sum(series['saltos_8pct_desde_corte']['conteo_por_divisa'].values())} "
+                  f"desde entonces (solo conteo; revisión manual, no se borran)")
             continue
         for nombre, r in series.items():
             if r["duplicadas"] or r["huecos"] or r["saltos"] or r["fechas_futuras"]:

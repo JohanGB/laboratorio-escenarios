@@ -386,6 +386,11 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
   vio y no se repite aquí); y los conteos de días perdidos de `limpieza.json`, que abarcan
   toda la serie. No se calculó ni se
   miró ninguna otra estadística, figura ni tabla de 2020 en adelante.
+  - *Añadido el 17-nov-2026 (previos de M2)*: hasta `main` en `7cb79fc`, `data/validacion.json`
+    listaba con fecha y tamaño los saltos > 8 % desde 2020 de `divisas.csv`: uno, JPY/COP del
+    2020-03-10. Desde M2 solo da conteos: `saltos_8pct_desde_corte` (JPY: 1) y, en las seis
+    series FRED crudas, `saltos_desde_censura` (saltos > 5 % del archivo crudo desde 2020: BRL 1,
+    MXN 2, las demás 0; sin fecha ni valor). Esos conteos también se vieron.
 
 ## 17-nov-2026 · Previos de M2 (revisión de M1 por el autor)
 - **Reproducción de fichas** (corrección del autor al requisito de M5): la reproducción exacta
@@ -405,3 +410,39 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
   negativas (EUR −0,231; MXN −0,291; CNY −0,201; CHF −0,110; BRL −0,378; cifras con `#hash` en
   `reports/fase0_divisas.md`, sección 2, datos hasta el 31-dic-2019). Yen: +0,047 con desfase
   −1 (`#0ca08c212f`, 6.670 pares).
+- **Saltos diarios > 8 % de `divisas.csv`: revisión manual** (ninguno se borra ni se ajusta).
+  «Evento documentado» significa que una fuente primaria fecha un cambio de régimen o un anuncio
+  oficial dentro del intervalo del rendimiento (del precio H.10 de la fila anterior al de la
+  fila; la TRM de *t* va con el H.10 del día hábil anterior). Es coincidencia de fechas
+  documentada, no un efecto medido. El tamaño es el cambio diario de X/COP (`#hash` de
+  `reports/fase0_divisas.md`, sección 6).
+
+  | Fecha (TRM) | Divisa | Intervalo H.10 | Tamaño | Evento documentado (fuente) | Se conserva |
+  |---|---|---|---:|---|---|
+  | 1994-01-04 | CNY | 1993-12-31 → 1994-01-03 | −33,2 % `#29d3f91346` | Unificación de los tipos de cambio de China: documento del directorio del FMI «China - Unification of Exchange Rates», EBD/94/1, 3-ene-1994 ([archivo del FMI](https://archivescatalog.imf.org/Details/archive/125118778)); la ficha del archivo no da la fecha de entrada en vigor | sí |
+  | 1994-12-21 | MXN | 1994-12-19 → 1994-12-20 | −12,3 % `#0a657f6fc7` | La Comisión de Cambios aprueba «elevar 15 por ciento el techo de la banda» la noche del 19-dic-1994 (Banco de México, *Historia del Banco de México*, t. XIX, cap. VI, [«Desplome cambiario»](https://www.banxico.org.mx/elib/hbm/19/6.html); la fecha se deduce del orden del texto) | sí |
+  | 1994-12-23 | MXN | 1994-12-21 → 1994-12-22 | −17,6 % `#b065960b27` | El peso «amaneció el referido 22 de diciembre con el sistema cambiario ya basado en la flotación libre» (misma fuente) | sí |
+  | 1994-12-28 | MXN | 1994-12-23 → 1994-12-27 | −17,9 % `#d996a2da3f` | sin explicación verificada | sí |
+  | 1995-01-04 | MXN | 1994-12-30 → 1995-01-03 | −8,6 % `#0fa832323f` | sin explicación verificada | sí |
+  | 1995-01-31 | MXN | 1995-01-27 → 1995-01-30 | −12,8 % `#edcb8ca78d` | sin explicación verificada | sí |
+  | 1995-02-01 | MXN | 1995-01-30 → 1995-01-31 | +11,8 % `#9726eefe5c` | sin explicación verificada | sí |
+  | 1995-02-23 | MXN | 1995-02-21 → 1995-02-22 | −8,1 % `#dd9a0c0d41` | sin explicación verificada | sí |
+  | 1995-03-07 | MXN | 1995-03-03 → 1995-03-06 | −8,3 % `#5fd569e8cb` | sin explicación verificada | sí |
+  | 1995-03-10 | MXN | 1995-03-08 → 1995-03-09 | −10,2 % `#e281b42364` | sin explicación verificada | sí |
+  | 1995-03-11 | MXN | 1995-03-09 → 1995-03-10 | +20,0 % `#b18ba4b32a` | sin explicación verificada | sí |
+  | 1999-01-16 | BRL | 1999-01-14 → 1999-01-15 | −10,1 % `#c04950209a` | Comunicado 6.563 del 15-ene-1999: el BCB se abstiene de operar en el mercado ese día, «suspensão temporária do regime de bandas» ([BCB, Política Cambial 1999](https://www.bcb.gov.br/rex/MerCambio/Port/cambio991/1999-1Pol%C3%ADticaCambial.asp?frame=1)) | sí |
+  | 1999-01-20 | BRL | 1999-01-15 → 1999-01-19 | −8,0 % `#464b7f7e3e` | Comunicado 6.565 del 18-ene-1999: «a partir daquela data, deixaria que o mercado definisse a taxa de câmbio» (misma fuente) | sí |
+  | 1999-02-03 | BRL | 1999-02-01 → 1999-02-02 | +8,5 % `#35b603a3f8` | sin explicación verificada | sí |
+  | 2002-08-09 | BRL | 2002-08-06 → 2002-08-08 | +9,2 % `#4a569d2d0b` | FMI, News Brief del 7-ago-2002, «IMF Managing Director Köhler Confirms Agreement with Brazil» (acuerdo de derecho de giro con US$30.000 millones adicionales) ([FMI](https://www.imf.org/external/np/sec/nb/2002/nb0285.htm)) | sí |
+  | 2008-10-07 | JPY | 2008-10-03 → 2008-10-06 | +8,8 % `#76a3cb9db1` | sin explicación verificada | sí |
+  | 2011-09-07 | CHF | 2011-09-02 → 2011-09-06 | −8,0 % `#da27a72e3a` | BNS, 6-sep-2011, «Swiss National Bank sets minimum exchange rate at CHF 1.20 per euro» ([BNS](https://www.snb.ch/en/publications/communication/press-releases/2011/pre_20110906)) | sí |
+  | 2015-01-16 | CHF | 2015-01-14 → 2015-01-15 | +12,0 % `#b16684b8c5` | BNS, 15-ene-2015, «Swiss National Bank discontinues minimum exchange rate and lowers interest rate to -0.75%» ([BNS](https://www.snb.ch/en/mmr/reference/pre_20150115)) | sí |
+
+  Desde el 2020-01-01 (sin fecha ni tamaño, solo conteo por divisa): JPY 1; EUR, MXN, CNY,
+  CHF y BRL 0. Se conservan. Las fuentes se consultaron el 17-nov-2026; la página del BCB dice
+  en su primera frase que la flotación rige «a partir de 15 de Janeiro de 1999», pero fecha el
+  Comunicado 6.565 el 18-01-1999: la tabla usa la fecha de cada comunicado.
+- **Regla desde ahora**: ninguna salida, validación ni registro de M1-M2 da valores de las
+  divisas nuevas con fecha ≥ 2020-01-01; solo conteos. `python -m laboratorio.datos` aplica
+  `divisas.CORTE_VISTO` a `divisas.csv` y a las seis series FRED crudas;
+  `tests/test_divisas.py` lo verifica sobre `data/validacion.json`.
