@@ -176,7 +176,8 @@ la que salga bien.
 
 1. **Prerregistro nuevo e independiente**: `docs/prerregistro_multidivisa.md` y etiqueta
    `prerregistro-multidivisa`. Reutiliza el mecanismo de candado de `backtest/final.py`
-   (hashes de código, datos y entorno; INICIADA/HECHO con SHA-256; corrida única), extrayendo lo
+   (hashes de código, datos y entorno —el de entorno incluye `scikit-learn`, que el original no
+   cubría—; INICIADA/HECHO con SHA-256; corrida única), extrayendo lo
    común a una función sin cambiar el comportamiento de la prueba final original (sus pruebas
    deben seguir pasando). Constantes nuevas en un módulo nuevo, p. ej. `backtest/final_divisas.py`.
 2. **Evaluación retrospectiva (2020-2026), declarada como «parcialmente vista».** Se evalúan las

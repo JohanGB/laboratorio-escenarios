@@ -323,3 +323,17 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
   `scikit-learn==1.8.0` en `requirements-prueba-final.txt`, la del equipo de la prueba final
   (instalada el 26-ene-2026). No figura en el prerregistro ni en `hash_entorno`; se anota en el
   archivo. Ninguna restricción se relajó.
+
+## 17-nov-2026 · Cierre de M0: licencias de resultados y scikit-learn fuera del hash de entorno
+- **Licencias (decisión del autor)**: `runs/`, `data/respaldo/` y `data/supuestos/` quedan bajo
+  CC BY 4.0, como los reportes (son resultados y supuestos del proyecto, no código). El README
+  aclara que `runs/` y `data/respaldo/` derivan de datos públicos cuyas fuentes conservan sus
+  términos.
+- **scikit-learn en la prueba final**: la prueba final (16-nov-2026) se corrió con
+  scikit-learn 1.8.0 (instalada el 26-ene-2026), que `lightgbm.LGBMRegressor` usa por debajo.
+  Esa versión **no quedó dentro de `hash_entorno`**: `PAQUETES` de `backtest/final.py` no la
+  incluye. No se cambia `PAQUETES`: tocar `src/` cambiaría `hash_codigo` y el prerregistro está
+  cerrado. El registro de esa versión es `requirements-prueba-final.txt` (agregado después de la
+  prueba, el 17-nov-2026; no es un hash prerregistrado).
+- **Para M3**: el prerregistro multidivisa debe incluir `scikit-learn` en la lista de paquetes de
+  su hash de entorno.
