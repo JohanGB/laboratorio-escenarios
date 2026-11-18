@@ -105,7 +105,6 @@ def test_resumen_separa_estres_y_normal():
     assert t["estres"] + t["normal"] == t["todo"]
 
 
-@pytest.mark.skipif(not (RAIZ / "data/processed/trm.csv").exists(), reason="sin datos")
 def test_la_prueba_final_no_se_carga_en_desarrollo():
     v = cargar_desarrollo(RAIZ)
     corte = pd.Timestamp(INICIO_PRUEBA_FINAL)

@@ -1,9 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "laboratorio"
 version = "0.1.0"
 requires-python = ">=3.11"
-dependencies = ["pandas", "openpyxl", "matplotlib", "scipy", "statsmodels", "arch", "lightgbm"]
+dependencies = ["numpy", "pandas", "openpyxl", "matplotlib", "scipy", "statsmodels", "arch", "lightgbm"]
+
+[project.optional-dependencies]
+dev = ["pytest", "hypothesis"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+markers = ["lento: tarda más de 30 s; la integración continua lo excluye (-m \"not lento\")"]

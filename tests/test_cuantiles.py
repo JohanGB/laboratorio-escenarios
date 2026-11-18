@@ -125,6 +125,7 @@ def test_rechaza_pocas_filas_en_vez_de_ajustar_basura():
         RegresionCuantiles().ajustar(chico.hasta(379))
 
 
+@pytest.mark.lento
 def test_qr_con_variables_captura_agrupamiento_de_volatilidad_y_calibra():
     """DGP GARCH-t: QR y LightGBM deben quedar calibrados y cerca del EWMA en CRPS (h=1)."""
     v = vista_de(r_garch(3300, seed=4))

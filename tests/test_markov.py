@@ -78,6 +78,7 @@ def test_varianzas_iguales_dan_normal_con_raiz_de_h(datos):
         assert np.all(np.abs(q[h][0] - esperado) <= tol)
 
 
+@pytest.mark.lento
 def test_calibrado_en_su_proceso_generador():
     r, _ = simular_markov(3200, seed=7)
     m = MarkovVarianza(2, sims=1500)

@@ -1,0 +1,10 @@
+# Entorno exacto de la prueba final (docs/prerregistro.md, sección 10; hash_entorno fd4c1314e5cc3e57).
+# Python 3.11.9: no se instala con pip; crea el entorno con ese intérprete.
+# Se usa como restricción al instalar el paquete:
+#   pip install -e ".[dev]" -c requirements-prueba-final.txt
+numpy==2.4.1
+pandas==3.0.0
+scipy==1.17.0
+statsmodels==0.15.0
+arch==9.0.0
+lightgbm==4.7.0

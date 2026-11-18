@@ -5,7 +5,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from laboratorio.backtest import particion as P
 from laboratorio.backtest.catalogo import FABRICAS, FABRICAS_LARGOS
@@ -54,8 +53,6 @@ def test_corrida_corta_no_cambia_al_agregar_modelos_largos():
 
 
 def _vista_real():
-    if not (RAIZ / "data/processed/trm.csv").exists():
-        pytest.skip("sin data/processed")
     from laboratorio.backtest.datos import cargar_desarrollo
     return cargar_desarrollo(RAIZ)
 

@@ -1,0 +1,22 @@
+name: pruebas
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instalar (versiones de la prueba final como restricción)
+        run: pip install -e ".[dev]" -c requirements-prueba-final.txt
+      - name: Reconstruir data/processed desde data/raw
+        run: python -m laboratorio.datos.limpieza
+      # La verificación de hashes de la prueba final no va aquí: depende del entorno exacto.
+      - name: Pruebas (sin las marcadas como lentas)
+        run: pytest -q -x -m "not lento"
