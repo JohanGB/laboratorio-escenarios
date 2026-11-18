@@ -125,10 +125,9 @@ mueve con él.
 1. La muestra común empieza cuando todas las divisas incluidas flotan (con el yuan, desde el
    2005-07-22): el motor conjunto no incluye la banda colombiana y no es el motor evaluado en la
    prueba final.
-2. Los saltos de la crisis mexicana (1994-1995), la unificación cambiaria china (1994) y la
-   devaluación brasileña (1999) quedan fuera de esa muestra común. Quedan dentro el real en
-   2002, el yen en octubre de 2008 y los dos saltos del franco suizo (inicio del piso en 2011 y
-   su fin en 2015).
+2. Los saltos del peso mexicano (1994-1995), del yuan (1994) y del real (1999) quedan fuera
+   de esa muestra común. Quedan dentro el del real en 2002, el del yen en octubre de 2008 y los
+   dos del franco suizo (2011 y 2015). Este reporte no atribuye causas a los saltos.
 3. Las correlaciones cambian entre periodos: el remuestreo por bloques con índices de fecha
    compartidos las conserva tal como fueron, sin suponer que son constantes.
 
