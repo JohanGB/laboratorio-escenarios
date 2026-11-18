@@ -54,7 +54,7 @@ el reporte las presenta juntas. Se publicó el hallazgo en vez de esconderlo.
   fuera de muestra la respalda o «sin respaldo fuera de muestra».
 - **Auditoría independiente** de la prueba final (`docs/auditoria_independiente.md`): sus
   hallazgos se corrigieron o quedaron cubiertos por pruebas (`tests/test_auditoria_h1.py`).
-- 410 pruebas automáticas (`pytest`), incluidas pruebas de fuga de información; la integración
+- 414 pruebas automáticas (`pytest`), incluidas pruebas de fuga de información; la integración
   continua de GitHub corre todas salvo las dos marcadas como lentas.
 
 ## Ejecutarlo (Windows, PowerShell)
@@ -72,6 +72,12 @@ limpia de la etiqueta (`git checkout prerregistro-adenda-1`), con Python 3.11.9 
 exactas de [`requirements-prueba-final.txt`](requirements-prueba-final.txt):
 `pip install -e ".[dev]" -c requirements-prueba-final.txt`. En la rama actual falla a propósito,
 porque el motor del caso cambió después de la prueba (ver `docs/decisiones.md`).
+
+**Reproducir una corrida del caso.** Cada ficha (`runs/<id>/ficha.json`) se reproduce en una
+copia limpia de la etiqueta `corrida-<id>`, el commit cuyo código tiene el `hash_codigo` de la
+ficha: ahí `python -m laboratorio.motor reproducir` da «COINCIDE». En la rama actual da «NO
+REPRODUCIBLE» a propósito, porque el código cambió. Tabla, pasos y pruebas en
+[`docs/reproduccion.md`](docs/reproduccion.md).
 
 Si falta `data/processed`, las pruebas lo reconstruyen al iniciar desde `data/raw` (versionado),
 con `python -m laboratorio.datos.limpieza`; ninguna prueba se salta por falta de datos. Los

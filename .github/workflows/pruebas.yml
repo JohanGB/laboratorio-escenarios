@@ -10,6 +10,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # historial y etiquetas corrida-<id> (tests/test_reproduccion.py)
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"

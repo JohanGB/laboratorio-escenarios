@@ -49,6 +49,38 @@ def hash_codigo(raiz: str | Path) -> str:
     return sha256_texto(canonico(partes))
 
 
+def hash_codigo_commit(repo: str | Path, commit: str, sub: str = "src/laboratorio") -> str:
+    """`hash_codigo` del árbol de `commit` bajo `sub`, leído con git (sin checkout).
+
+    Mismo cálculo que `hash_codigo`: los .py fuera de __pycache__, ruta relativa a `sub`,
+    contenido con CRLF -> LF, y el mismo orden (el de `Path`).
+    """
+    def git(*args, entrada: bytes | None = None) -> bytes:
+        r = subprocess.run(["git", "-C", str(repo), *args], input=entrada, capture_output=True)
+        if r.returncode != 0:
+            raise RuntimeError(f"git {' '.join(args)}: {r.stderr.decode(errors='replace').strip()}")
+        return r.stdout
+
+    filas = git("ls-tree", "-r", "-z", commit, "--", sub).split(b"\0")
+    blobs = {}
+    for fila in filter(None, filas):
+        meta, ruta = fila.split(b"\t", 1)
+        modo, tipo, sha = meta.split()
+        ruta = ruta.decode("utf-8")
+        if tipo == b"blob" and ruta.endswith(".py") and "__pycache__" not in ruta.split("/"):
+            blobs[ruta[len(sub) + 1:]] = sha.decode()
+    salida = git("cat-file", "--batch", entrada="".join(f"{s}\n" for s in blobs.values()).encode())
+    contenidos, i = {}, 0
+    for rel, sha in blobs.items():
+        fin = salida.index(b"\n", i)
+        tamano = int(salida[i:fin].split()[2])
+        contenidos[rel] = salida[fin + 1: fin + 1 + tamano]
+        i = fin + 1 + tamano + 1
+    partes = [[rel, hashlib.sha256(contenidos[rel].replace(b"\r\n", b"\n")).hexdigest()]
+              for rel in sorted(contenidos, key=Path)]
+    return sha256_texto(canonico(partes))
+
+
 def commit_git(raiz: str | Path) -> str | None:
     """Commit actual si `raiz` está en un repositorio git (informativo; no entra en hashes)."""
     try:
