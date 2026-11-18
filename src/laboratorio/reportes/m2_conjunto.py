@@ -4,10 +4,11 @@ Uso (desde la raíz del proyecto):
     PYTHONPATH=src python -m laboratorio.reportes.m2_conjunto [--trayectorias 10000]
 Entrada: data/processed/divisas.csv y data/processed/trm.csv. Salida: reports/m2_conjunto.md.
 
-Solo muestra cifras de la TRM. El motor conjunto se corre con las siete divisas (eso fija la
-muestra común y las fechas comunes), pero ninguna cifra de las divisas nuevas sale en el reporte:
-desde 2020 no se muestran (regla de la revisión de M1) y antes de M3 no se evalúan. Cada cifra
-lleva `#hash` (motor/cifras.py) y su respaldo.
+Las secciones 1-3 solo muestran cifras de la TRM. El motor conjunto se corre con las siete
+divisas (eso fija la muestra común y las fechas comunes), pero ninguna cifra de las divisas nuevas
+con datos desde 2020 sale en el reporte (regla de la revisión de M1). La sección 4 (correlaciones
+bajo el supuesto CCC) usa solo datos hasta `CORTE_CORR` (2019-12-31). Cada cifra lleva `#hash`
+(motor/cifras.py) y su respaldo.
 """
 from __future__ import annotations
 
@@ -30,6 +31,8 @@ NIVELES = (0.025, 0.5, 0.975)
 AVISO = ("**No es asesoría financiera**; los rangos describen incertidumbre estadística, no "
          "promesas.")
 SIN_RESPALDO = "sin evaluación fuera de muestra hasta M3"
+CORTE_CORR = "2019-12-31"            # sección 4: nada de 2020 en adelante de las divisas nuevas
+SIMS_CORR = 200_000                  # paso 1: con 10.000 el error de Monte Carlo es ~0,01-0,03
 RESPALDO_EVALUADO = ("límites: cobertura del 95 % evaluada en la prueba final "
                      "(`data/respaldo/prueba_final.json`); mediana: sin respaldo fuera de muestra")
 
@@ -96,6 +99,26 @@ def generar(raiz: str | Path = ".", trayectorias: int = C.TRAYECTORIAS,
     s_c = c(100 * sc.sigma_origen["TRM"], "% diario", "σ EWMA de la TRM prevista en el origen, muestra común")
     trm0_c = c(trm0, "COP", f"TRM en el origen ({origen.date()})")
 
+    # Correlaciones bajo CCC, con datos hasta CORTE_CORR (ninguna cifra de divisas nuevas ≥ 2020).
+    v19 = C.vistas_divisas(df[df["fecha"] <= CORTE_CORR])
+    cc_ = C.correlaciones_paso1(v19, SIETE)
+    s19 = C.simular_conjunto(v19, SIETE, MOTOR_CASO, sims=SIMS_CORR, semilla=semilla, largo=1)
+    sim19 = np.corrcoef(s19.acum[0], rowvar=False)
+    pie = f"(datos hasta {CORTE_CORR}, muestra común desde {s19.muestra_desde})"
+    filas_corr = []
+    for j, d in enumerate(SIETE[1:], start=1):
+        par = f"TRM y {d}/COP"
+        h_ = c(float(cc_["historica"][0, j]), "", f"correlación histórica de los rendimientos, {par} {pie}")
+        z_ = c(float(cc_["choques"][0, j]), "", f"correlación de los cruces armados con los choques z sin reescalar (A·C_z·A'), {par} {pie}")
+        i_ = c(float(cc_["implicita"][0, j]), "", f"correlación implícita CCC en el paso 1 (A·D·C_z·D·A', D = σ del origen), {par} {pie}")
+        m_ = c(float(sim19[0, j]), "", f"correlación simulada en el paso 1, {MOTOR_CASO}, {formatear(SIMS_CORR, 0)} trayectorias, semilla {semilla}, {par} {pie}")
+        filas_corr.append(f"| {par} | {rep.r(h_, 3, False)} | {rep.r(z_, 3, False)} | {rep.r(i_, 3, False)} | {rep.r(m_, 3, False)} |")
+    tri = np.triu_indices(len(SIETE), 1)
+    dif_sim = c(float(np.abs(sim19 - cc_["implicita"])[tri].max()), "",
+                f"máxima |simulada − implícita| en los 21 pares de X/COP {pie}")
+    dif_hist = c(float(np.abs(cc_["implicita"] - cc_["historica"])[tri].max()), "",
+                 f"máxima |implícita − histórica| en los 21 pares de X/COP {pie}")
+
     md = f"""# Motor conjunto (M2): la TRM frente al motor evaluado
 
 {AVISO}
@@ -140,10 +163,36 @@ amplificada unas 2,1 veces. La fila «deriva con que entra la muestra» es esa c
 motor (media del choque estandarizado por σ de largo plazo). Las bandas también cambian con la
 longitud de bloque y con la σ de largo plazo de cada muestra.
 
-## 4. Lo que este reporte no muestra
+## 4. Correlación entre divisas: supuesto de correlación condicional constante
 
-- Ninguna cifra de EUR, MXN, JPY, CNY, CHF ni BRL. Desde 2020 sus valores no se muestran hasta
-  el prerregistro de M3, y el motor conjunto no tiene evaluación fuera de muestra.
+Con datos hasta el {CORTE_CORR} (origen de esta sección; ninguna cifra de 2020 en adelante),
+{formatear(SIMS_CORR, 0)} trayectorias y un solo paso. Pares de la TRM con cada X/COP:
+
+| Par | Histórica (rendimientos) | Choques z sin reescalar | Implícita (CCC, paso 1) | Simulada (paso 1) |
+|---|---:|---:|---:|---:|
+{chr(10).join(filas_corr)}
+
+El motor filtrado supone una correlación condicional constante (CCC; Bollerslev, 1990): remuestrea
+los choques estandarizados z de los factores (TRM y cada «USD por X») con su correlación, y
+reescala cada factor con su propia volatilidad prevista en el origen. Reescalar no cambia la
+correlación entre factores, pero la de los cruces sí, porque X/COP = TRM × USD por X y la
+correlación de una suma depende de cuánto pesa cada sumando. La correlación de referencia es
+entonces la implícita, Σ = D·C_z·D sobre los factores (D: volatilidades del origen; C_z: covarianza
+de los z, cuyo desvío no es exactamente 1), llevada a los cruces. En los 21 pares, la simulada
+queda a {rep.r(dif_sim, 3)} como máximo de la implícita, y la implícita se aparta hasta
+{rep.r(dif_hist, 3)} de la histórica incondicional. Esa distancia tiene dos fuentes mecánicas, no un
+error de simulación: la correlación de los z no es la de los rendimientos (columna «choques»), y
+las volatilidades del origen cambian el peso de cada factor en el cruce. Este reporte no atribuye
+causas a esas volatilidades.
+
+**Limitación:** la correlación entre los choques se supone constante; en episodios de estrés
+puede no serlo. Si eso importa para la cobertura de una canasta lo decidirán los datos en M3, que
+prerregistrará ambas variantes (`{MOTOR_CASO}` principal, `bootstrap_est` como sensibilidad).
+
+## 5. Lo que este reporte no muestra
+
+- Ninguna cifra de EUR, MXN, JPY, CNY, CHF ni BRL con datos desde 2020 (no se muestran hasta el
+  prerregistro de M3), y el motor conjunto no tiene evaluación fuera de muestra.
 - La sensibilidad con la mediana de las longitudes de bloque (`bloque="mediana"`): depende de las
   series de las divisas nuevas hasta el origen y se reportará en M3.
 

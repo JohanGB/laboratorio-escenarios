@@ -47,16 +47,33 @@ def test_cada_cifra_tiene_hash_y_esta_en_el_apendice(md):
         assert all(HASH.search(x) for x in celdas), l
 
 
-def test_ninguna_cifra_de_divisas_nuevas(md):
-    for linea in _cuerpo(md).splitlines():
+def _sin_cifras_de_divisas_nuevas_desde_2020(texto: str) -> None:
+    """Fuera de la sección 4 ninguna línea con cifra nombra una divisa nueva; la sección 4 y cada
+    fila del apéndice que nombra una solo usan datos hasta CORTE_CORR (2019-12-31)."""
+    cuerpo = _cuerpo(texto)
+    sec4 = cuerpo.split("## 4.")[1].split("## 5.")[0]
+    assert f"datos hasta el {R.CORTE_CORR}" in sec4
+    for linea in cuerpo.replace(sec4, "").splitlines():
         if HASH.search(linea):
             assert not NUEVAS.search(linea), linea
-    assert not NUEVAS.search(md.split("## Apéndice")[1].replace("USD, EUR, MXN, JPY, CNY, CHF, BRL", ""))
+    for linea in texto.split("## Apéndice")[1].splitlines():
+        if NUEVAS.search(linea.replace("USD, EUR, MXN, JPY, CNY, CHF, BRL", "")):
+            assert f"datos hasta {R.CORTE_CORR}" in linea, linea
+
+
+def test_ninguna_cifra_de_divisas_nuevas_desde_2020(md):
+    _sin_cifras_de_divisas_nuevas_desde_2020(md)
+
+
+def test_correlaciones_ccc_con_hash_y_limitacion(md):
+    sec4 = _cuerpo(md).split("## 4.")[1].split("## 5.")[0]
+    filas = [l for l in sec4.splitlines() if l.startswith("| TRM y ")]
+    assert len(filas) == 6 and all(len(HASH.findall(l)) == 4 for l in filas)
+    assert "Bollerslev, 1990" in sec4 and "en episodios de estrés" in sec4
+    assert "puede no serlo" in sec4 and "bootstrap_est` como sensibilidad" in sec4
 
 
 def test_el_reporte_versionado_es_el_del_generador():
     texto = (RAIZ / "reports/m2_conjunto.md").read_text(encoding="utf-8")
     assert "--trayectorias 10000 --semilla 20240501" in texto
-    for linea in _cuerpo(texto).splitlines():
-        if HASH.search(linea):
-            assert not NUEVAS.search(linea), linea
+    _sin_cifras_de_divisas_nuevas_desde_2020(texto)

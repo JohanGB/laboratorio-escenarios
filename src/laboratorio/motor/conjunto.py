@@ -15,7 +15,11 @@ Diseño (docs/prompts/PROMPT_VEKTOR_FX.md, M2; decisiones en docs/decisiones.md)
 3. **Variante filtrada** (`bootstrap_est_filtrado`): cada serie se estandariza con su propia σ
    EWMA (z = r/σ_{t−1}) y se reescala con su propia trayectoria de σ desde el origen (σ̄², ρ de
    `BootstrapEstacionario.ajustar`), como el motor de una sola serie. `bootstrap_est` remuestrea
-   los rendimientos tal cual.
+   los rendimientos tal cual. Supuesto: correlación condicional constante (CCC, Bollerslev
+   1990). La correlación de los factores es la de los z; la de los cruces X/COP depende además
+   de cuánto pesa cada factor en la suma, es decir, de las σ del origen
+   (`correlaciones_paso1`). Limitación: la correlación se supone constante; en episodios de
+   estrés puede no serlo.
 4. **Bloque común.** Por defecto, la longitud de Politis-White de la TRM en la muestra común (el
    máximo entre la serie y su valor absoluto, como en `ajustar`). Alternativa para sensibilidad:
    `bloque="mediana"`, la mediana de las longitudes de los factores de la corrida.
@@ -244,6 +248,45 @@ def simular_conjunto(vistas: Mapping[str, pd.DataFrame], divisas: Sequence[str],
         regla_bloque=regla, bloques_factor=bloques, sigma_origen=sig_o, sigma_largo=sig_l, rho=rho,
         muestra_desde=str(niv.index[0].date()), muestra_hasta=str(niv.index[-1].date()),
         n=int(len(X)), semilla=int(semilla))
+
+
+def correlaciones_paso1(vistas: Mapping[str, pd.DataFrame], divisas: Sequence[str], desde=None,
+                        origen=None) -> dict[str, np.ndarray]:
+    """Correlaciones (divisas × divisas) de los X/COP bajo el supuesto de correlación condicional
+    constante (CCC, Bollerslev 1990) de `bootstrap_est_filtrado`, para el primer paso simulado.
+
+    - "historica": de los rendimientos de los X/COP en la muestra común (incondicional).
+    - "choques": la de los cruces si cada factor pesara según la covarianza de sus choques
+      estandarizados z, sin reescalar (A·C_z·A').
+    - "implicita": la que debe dar la simulación en el paso 1: Σ = D·C_z·D sobre los factores,
+      con D = σ EWMA de cada factor en el origen, y luego A·Σ·A' (X/COP = TRM + USD por X en
+      logaritmos). C_z = S·R_z·S, con S el desvío de los z: no es 1 (el remuestreo conserva su
+      dispersión), así que se usa la covarianza y no solo la correlación R_z.
+    También "R_z" (factores × factores) y "factores" (sus nombres).
+    """
+    divisas = tuple(divisas)
+    vistas = _recortar(vistas, origen)
+    desde = muestra_comun(vistas, divisas) if desde is None else desde
+    niv = niveles_factores(vistas, divisas, desde)
+    nombres = tuple(niv.columns)
+    R = np.diff(np.log(niv.to_numpy()), axis=0)
+    Z = np.column_stack([residuos_estandarizados(np.r_[np.nan, R[:, j]]) for j in range(R.shape[1])])
+    Z = Z[np.isfinite(Z).all(axis=1)]
+    Cz = np.cov(Z, rowvar=False, bias=True)                # el remuestreo es uniforme sobre las filas
+    D = np.diag([float(np.sqrt(_sigma2_ewma(np.r_[np.nan, R[:, j]])[-1])) for j in range(R.shape[1])])
+    A = np.zeros((len(divisas), len(nombres)))
+    for i, d in enumerate(divisas):
+        A[i, 0] = 1.0
+        if d != "USD":
+            A[i, nombres.index(f"USD por {d}")] = 1.0
+    hist = rendimientos_muestra(vistas, divisas, desde).corr().to_numpy()
+    return {"historica": hist, "choques": _corr(A @ Cz @ A.T), "implicita": _corr(A @ D @ Cz @ D @ A.T),
+            "R_z": _corr(Cz), "factores": nombres}
+
+
+def _corr(S: np.ndarray) -> np.ndarray:
+    d = np.sqrt(np.diag(S))
+    return S / np.outer(d, d)
 
 
 def _serie_alineada(m: BootstrapEstacionario, r: np.ndarray) -> np.ndarray:

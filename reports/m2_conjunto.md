@@ -47,10 +47,41 @@ amplificada unas 2,1 veces. La fila «deriva con que entra la muestra» es esa c
 motor (media del choque estandarizado por σ de largo plazo). Las bandas también cambian con la
 longitud de bloque y con la σ de largo plazo de cada muestra.
 
-## 4. Lo que este reporte no muestra
+## 4. Correlación entre divisas: supuesto de correlación condicional constante
 
-- Ninguna cifra de EUR, MXN, JPY, CNY, CHF ni BRL. Desde 2020 sus valores no se muestran hasta
-  el prerregistro de M3, y el motor conjunto no tiene evaluación fuera de muestra.
+Con datos hasta el 2019-12-31 (origen de esta sección; ninguna cifra de 2020 en adelante),
+200.000 trayectorias y un solo paso. Pares de la TRM con cada X/COP:
+
+| Par | Histórica (rendimientos) | Choques z sin reescalar | Implícita (CCC, paso 1) | Simulada (paso 1) |
+|---|---:|---:|---:|---:|
+| TRM y EUR/COP | 0,709 `#2c8cfa74b4` | 0,605 `#1b38476bdc` | 0,870 `#aff257cc1a` | 0,870 `#c63127c121` |
+| TRM y MXN/COP | 0,510 `#160b9da6c8` | 0,499 `#6085a9bf3f` | 0,777 `#01742388e9` | 0,779 `#09ff69714d` |
+| TRM y JPY/COP | 0,786 `#eab6377cb6` | 0,713 `#f14943c860` | 0,896 `#5ef538bad2` | 0,896 `#add854a3f8` |
+| TRM y CNY/COP | 0,976 `#eb35cfe75a` | 0,504 `#dd6e9d20ed` | 0,913 `#c5207ed727` | 0,912 `#acdf4ff913` |
+| TRM y CHF/COP | 0,686 `#19ac5a1545` | 0,622 `#1e6134d9d7` | 0,799 `#23927ddee7` | 0,798 `#a712d3dd4c` |
+| TRM y BRL/COP | 0,263 `#54b2ac396a` | 0,508 `#8ccf5b0b04` | 0,460 `#c94a34ca14` | 0,460 `#19431c224a` |
+
+El motor filtrado supone una correlación condicional constante (CCC; Bollerslev, 1990): remuestrea
+los choques estandarizados z de los factores (TRM y cada «USD por X») con su correlación, y
+reescala cada factor con su propia volatilidad prevista en el origen. Reescalar no cambia la
+correlación entre factores, pero la de los cruces sí, porque X/COP = TRM × USD por X y la
+correlación de una suma depende de cuánto pesa cada sumando. La correlación de referencia es
+entonces la implícita, Σ = D·C_z·D sobre los factores (D: volatilidades del origen; C_z: covarianza
+de los z, cuyo desvío no es exactamente 1), llevada a los cruces. En los 21 pares, la simulada
+queda a 0,002 `#e8d9e56757` como máximo de la implícita, y la implícita se aparta hasta
+0,325 `#bed03a7d65` de la histórica incondicional. Esa distancia tiene dos fuentes mecánicas, no un
+error de simulación: la correlación de los z no es la de los rendimientos (columna «choques»), y
+las volatilidades del origen cambian el peso de cada factor en el cruce. Este reporte no atribuye
+causas a esas volatilidades.
+
+**Limitación:** la correlación entre los choques se supone constante; en episodios de estrés
+puede no serlo. Si eso importa para la cobertura de una canasta lo decidirán los datos en M3, que
+prerregistrará ambas variantes (`bootstrap_est_filtrado` principal, `bootstrap_est` como sensibilidad).
+
+## 5. Lo que este reporte no muestra
+
+- Ninguna cifra de EUR, MXN, JPY, CNY, CHF ni BRL con datos desde 2020 (no se muestran hasta el
+  prerregistro de M3), y el motor conjunto no tiene evaluación fuera de muestra.
 - La sensibilidad con la mediana de las longitudes de bloque (`bloque="mediana"`): depende de las
   series de las divisas nuevas hasta el origen y se reportará en M3.
 
@@ -107,6 +138,30 @@ PYTHONPATH=src python -m laboratorio.reportes.m2_conjunto --trayectorias 10000 -
 | `#b46783790e` | calculo | ancho de la banda del 95 % a 252 pasos, conjunto / evaluado | `b46783790e5c3b365574b186374ddc2884577f25e24cfd0a61a0d7b57953c0fb` |
 | `#36634e4c7c` | calculo | ancho de la banda del 95 % a 5 pasos, conjunto / evaluado | `36634e4c7c01676730b7f2b4914caa245fe4504f979fa15a5bbe71fcb4673592` |
 | `#63a05f5b3d` | calculo | ancho de la banda del 95 % a 63 pasos, conjunto / evaluado | `63a05f5b3d8a7bda702a4a9608b9e8a3b712f4f35057097f9f45429dab3411a6` |
+| `#8ccf5b0b04` | calculo | correlación de los cruces armados con los choques z sin reescalar (A·C_z·A'), TRM y BRL/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `8ccf5b0b047d9e8e38183e022e91e571881bc02dc868f967bea32315b852e5bf` |
+| `#1e6134d9d7` | calculo | correlación de los cruces armados con los choques z sin reescalar (A·C_z·A'), TRM y CHF/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `1e6134d9d7caf848e1ebd8d249cd73928ca085238810f283a16ad6edd9b8de6a` |
+| `#dd6e9d20ed` | calculo | correlación de los cruces armados con los choques z sin reescalar (A·C_z·A'), TRM y CNY/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `dd6e9d20edf5562107ddae5fe1ae7d9160847f1f6e97f38d1fa2923ce53f83b3` |
+| `#1b38476bdc` | calculo | correlación de los cruces armados con los choques z sin reescalar (A·C_z·A'), TRM y EUR/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `1b38476bdcf911f8a3adc9851095f49ca39ca955623ada095517bc8e417f3077` |
+| `#f14943c860` | calculo | correlación de los cruces armados con los choques z sin reescalar (A·C_z·A'), TRM y JPY/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `f14943c8602ce3fcda8bef2bb57b5620ff0c58d269305d29a64964be86ae0428` |
+| `#6085a9bf3f` | calculo | correlación de los cruces armados con los choques z sin reescalar (A·C_z·A'), TRM y MXN/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `6085a9bf3ff997346bf212b58538da439126c34b7380d5f87210e675326b1aa9` |
+| `#54b2ac396a` | calculo | correlación histórica de los rendimientos, TRM y BRL/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `54b2ac396ade0767a2b8ee98ff9a5295fb6118a42d03ea2ce8acf702912ed583` |
+| `#19ac5a1545` | calculo | correlación histórica de los rendimientos, TRM y CHF/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `19ac5a1545b780d9fc47ef3c1b645b5049adaa5b06110b864f6ebe58cd3984a0` |
+| `#eb35cfe75a` | calculo | correlación histórica de los rendimientos, TRM y CNY/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `eb35cfe75a13a1b811e4775a43fef65c95ecdbd1ee150f32eee7b6ccee291533` |
+| `#2c8cfa74b4` | calculo | correlación histórica de los rendimientos, TRM y EUR/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `2c8cfa74b4bdd66d05d4abf2ce7c83dd9bb9db89d7684362acc6102af5964ede` |
+| `#eab6377cb6` | calculo | correlación histórica de los rendimientos, TRM y JPY/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `eab6377cb66c10f22109d03a12ffeac0c097c1875ab441107505f02ecaaea116` |
+| `#160b9da6c8` | calculo | correlación histórica de los rendimientos, TRM y MXN/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `160b9da6c8d35563ccd19d0827b553148dace564249c9e50e57df93ba3bf915f` |
+| `#c94a34ca14` | calculo | correlación implícita CCC en el paso 1 (A·D·C_z·D·A', D = σ del origen), TRM y BRL/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `c94a34ca14690eedfc130d88712f59409828dc24fe0f5155e834ffbd6faf576e` |
+| `#23927ddee7` | calculo | correlación implícita CCC en el paso 1 (A·D·C_z·D·A', D = σ del origen), TRM y CHF/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `23927ddee74c937237f3191e2fc7466b2406d21881ad01611d13879f27e026c7` |
+| `#c5207ed727` | calculo | correlación implícita CCC en el paso 1 (A·D·C_z·D·A', D = σ del origen), TRM y CNY/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `c5207ed72704f2ce6482a8fcbe3e5adc1c931a92179bafff37c59094d8116552` |
+| `#aff257cc1a` | calculo | correlación implícita CCC en el paso 1 (A·D·C_z·D·A', D = σ del origen), TRM y EUR/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `aff257cc1a97ae2ef0a4d9b6c40571c5d4e270fda677f8abecebfa9463247e41` |
+| `#5ef538bad2` | calculo | correlación implícita CCC en el paso 1 (A·D·C_z·D·A', D = σ del origen), TRM y JPY/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `5ef538bad2cd5d8734f44fed23c91807cd161ed808a3c187a92feab419a4e3d9` |
+| `#01742388e9` | calculo | correlación implícita CCC en el paso 1 (A·D·C_z·D·A', D = σ del origen), TRM y MXN/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `01742388e9a156c5fdbcc4e1cbd90cf25a2cd37fd27a61409346388c009f60d9` |
+| `#19431c224a` | calculo | correlación simulada en el paso 1, bootstrap_est_filtrado, 200.000 trayectorias, semilla 20240501, TRM y BRL/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `19431c224acdeb93a3f39aee78c74dea3caf9ca1f3c14a0d530a931290220006` |
+| `#a712d3dd4c` | calculo | correlación simulada en el paso 1, bootstrap_est_filtrado, 200.000 trayectorias, semilla 20240501, TRM y CHF/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `a712d3dd4c1bbf3970c802b12a21d17b1da4cbf6065a743ad6754ebb471648ba` |
+| `#acdf4ff913` | calculo | correlación simulada en el paso 1, bootstrap_est_filtrado, 200.000 trayectorias, semilla 20240501, TRM y CNY/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `acdf4ff913ab4e19d0e8f4ae39b9b8b17ca240bcaf11d9bc84e7d665759674b2` |
+| `#c63127c121` | calculo | correlación simulada en el paso 1, bootstrap_est_filtrado, 200.000 trayectorias, semilla 20240501, TRM y EUR/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `c63127c1211d79063dd606755d14d74e3cd86a2551daa8c57678bf7a9129da60` |
+| `#add854a3f8` | calculo | correlación simulada en el paso 1, bootstrap_est_filtrado, 200.000 trayectorias, semilla 20240501, TRM y JPY/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `add854a3f80a9ceec3792df1031a3b5a98bdbe6befcde3050ebea2b888990117` |
+| `#09ff69714d` | calculo | correlación simulada en el paso 1, bootstrap_est_filtrado, 200.000 trayectorias, semilla 20240501, TRM y MXN/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `09ff69714dbb24f55049d214901e806946e3123336bb7cd52f63ef9130ffacdd` |
 | `#b9cbf3df77` | calculo | diferencia de la mediana a 1 pasos, conjunto vs evaluado | `b9cbf3df77f0d941bfc7484c2bb6718839877894300dec87f6df6a2efd3e7b78` |
 | `#ff80c09d60` | calculo | diferencia de la mediana a 126 pasos, conjunto vs evaluado | `ff80c09d607c63b4ac95c6b2db861d7abe6f98eef3fa973a4380c23175d37c44` |
 | `#155910d0b4` | calculo | diferencia de la mediana a 21 pasos, conjunto vs evaluado | `155910d0b4c0638355acb8a897756ecbd7271d2aa5ad5b0990f5573053158a03` |
@@ -118,6 +173,8 @@ PYTHONPATH=src python -m laboratorio.reportes.m2_conjunto --trayectorias 10000 -
 | `#cca29069c7` | calculo | longitud media de bloque, motor evaluado (Politis-White, toda la historia) | `cca29069c72139aeaaa945dcdf6f725f3f0708e191b7f0bd9b2a28171ef3ed14` |
 | `#034e642da9` | calculo | media de z de la TRM en la muestra común × σ de largo plazo, motor conjunto, sin evaluación fuera de muestra hasta M3 | `034e642da9e0c3bf6752cf64687c382404c836e2e259a9c3c6673b903f68575b` |
 | `#cb5737f707` | calculo | media de z de toda la historia × σ de largo plazo, motor evaluado | `cb5737f707427b4a8ac57156a3ff1ba8c581cdd00138981dddc2018eafc063bb` |
+| `#bed03a7d65` | calculo | máxima \|implícita − histórica\| en los 21 pares de X/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `bed03a7d65750be3e406d6621f7b9b237fb75abb418cd701b6d488544f7e38b3` |
+| `#e8d9e56757` | calculo | máxima \|simulada − implícita\| en los 21 pares de X/COP (datos hasta 2019-12-31, muestra común desde 2005-07-23) | `e8d9e567571cbc86c5d6505f0cb33ac4d41c90f2d3f0f9106bbcf2c9c657225d` |
 | `#40de16b56b` | calculo | rendimientos de la TRM que remuestrea el motor evaluado | `40de16b56b6399c39fba2810b1dee8674080418e799473825a99839ce4714e22` |
 | `#293d7f92c2` | calculo | σ EWMA de la TRM prevista en el origen, muestra común | `293d7f92c20b2422599ac1654597c8de98bb4b26b5cc443e2714421ef044aa20` |
 | `#821d4d38a1` | calculo | σ EWMA prevista en el origen, motor evaluado | `821d4d38a17660f83fc2c96353e920a563ddc98c9961beb8f8614264d2fc5f17` |

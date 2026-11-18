@@ -401,10 +401,8 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
     prueba de etiquetas la admite como única excepción, con esas dos condiciones comprobadas.
   - La prueba de etiquetas no se marca `lento` (tarda menos de 1 s): así corre en la CI y una
     ficha nueva sin etiqueta la rompe. La CI hace checkout con historial completo
-    (`fetch-depth: 0`) para tener las etiquetas. La prueba de no regresión tarda unos 5 s, pero
-    se marcó `lento` después de que fallara en la CI: el `hash_datos` de la ficha incluye
-    `data/processed/trm.csv` tal como lo escribe Windows (CRLF, `641393c5…`); en Linux se
-    reconstruye con LF y el hash no coincide. Corre en la suite local completa (`pytest -q -x`).
+    (`fetch-depth: 0`) para tener las etiquetas. La prueba de no regresión (unos 5 s) también
+    corre en la CI; ver «Prueba 1b en la CI y fin de línea» en la sección de M2.
 - **Criterio de la alineación TRM–FRED**: se eligió el desfase con la mayor correlación **en
   valor absoluto** entre los rendimientos logarítmicos de la TRM (COP por USD) y de «USD por X».
   El signo negativo es el esperado: si el dólar sube frente al peso, también suele subir frente a
@@ -483,24 +481,51 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
   valor absoluto, como `ajustar`). La alternativa `bloque="mediana"` (mediana de los factores de
   la corrida) está implementada y probada, pero no se reporta hasta M3: depende de las series de
   las divisas nuevas hasta el origen.
-- **Desviación de la prueba 6 (correlación ±0,05) en la variante filtrada — decisión del
-  autor pendiente.** Con `bootstrap_est` la prueba pasa tal como está escrita: con origen
-  2019-12-31 y 10.000 trayectorias, la correlación simulada de las siete X/COP queda a 0,008
-  como máximo de la histórica. Con `bootstrap_est_filtrado` no pasa: la diferencia máxima es
-  0,194. Diagnóstico (mismo origen y semilla): la correlación simulada de los factores queda a
-  0,005 de la histórica de los choques estandarizados z (lo que se remuestrea), pero la de los z
-  difiere hasta 0,094 de la de los rendimientos, y al reescalar cada factor con su propia σ del
-  origen (TRM a 0,73 de su σ de largo plazo; cinco de los seis «USD por X» entre 0,43 y 0,57; el
-  yuan a 1,02) la correlación de los cruces queda condicionada a las σ del origen. No se relajó
-  la prueba en silencio: para la variante filtrada se prueba lo que el mecanismo garantiza
-  (factores frente a la correlación histórica de los z, ±0,05), y la X/COP queda sin exigir
-  hasta que el autor decida (opciones: aceptar la correlación condicional, reescalar con una σ
-  común, o exigir la prueba solo a `bootstrap_est`). Cifras de diagnóstico sin `#hash`, todas con
-  datos hasta 2019; se reproducen con `tests/test_conjunto.py`.
+- **Correlación de la variante filtrada: supuesto CCC (decisión del autor, 17-nov-2026).** La
+  prueba 6 (±0,05 frente a la correlación histórica) pasa con `bootstrap_est` (0,008 como máximo,
+  origen 2019-12-31, 10.000 trayectorias) y no con `bootstrap_est_filtrado` (0,194). No es un
+  error: el motor filtrado supone correlación condicional constante (CCC; Bollerslev, 1990).
+  Remuestrea los choques estandarizados con su correlación y reescala cada factor con su σ del
+  origen; eso no cambia la correlación de los factores, pero sí la de los cruces X/COP, que
+  depende del peso de cada factor en la suma. Comparar con la correlación incondicional era el
+  criterio equivocado (error del prompt, según el autor). Se descartan reescalar con una σ común
+  (anula el filtrado, decisión ad hoc) y probar solo `bootstrap_est` (deja sin probar el motor
+  principal). Pruebas de la variante filtrada:
+  - factores, 21 pasos, 10.000 trayectorias: a ±0,005 de R_z (máximo medido 0,00498);
+  - cruces, paso 1: a ±0,01 de la correlación implícita (`conjunto.correlaciones_paso1`).
+  **Dos desviaciones respecto de lo pedido en esta segunda prueba**, sin aflojar la tolerancia:
+  (1) la implícita usa la covarianza de los choques, Σ = D·C_z·D con C_z = S·R_z·S, y no
+  D·R_z·D. El desvío de los z no es 1 (el del yuan es 1,46 con datos hasta 2019) y el remuestreo
+  lo conserva; con R_z la «implícita» se aparta hasta 0,042 de la exacta y la prueba no
+  convergería nunca (0,044 con 200.000 trayectorias). (2) Se usan 200.000 trayectorias con un
+  solo paso (cuesta 0,1 s), no 10.000: con 10.000 el error de Monte Carlo de una correlación en
+  un solo paso es del orden de 0,01, y el máximo en 21 pares fue 0,025, así que ±0,01 no se
+  puede comprobar a ese tamaño. Con 200.000 la diferencia máxima es 0,002. El reporte tiene la
+  tabla (histórica, choques sin reescalar, implícita, simulada) con datos hasta 2019-12-31 y la
+  limitación: la correlación se supone constante y en episodios de estrés puede no serlo.
+  Para M3: la cobertura de la canasta se prerregistra para ambas variantes (filtrada principal,
+  `bootstrap_est` sensibilidad, como en el caso 1).
 - **Reporte `reports/m2_conjunto.md`** (solo TRM; prueba de que ninguna línea con cifra nombra
   una divisa nueva): mismo origen (2026-11-14), semilla y 10.000 trayectorias. El conjunto da una
   mediana más baja que el motor evaluado (−6,4 % a 252 días) y bandas algo más estrechas (0,89
   veces a 252); la deriva con que entra cada muestra es 0,0110 % diario frente a 0,0358 %
   (cifras con `#hash` en el reporte), coherente con F5b: la banda arrastra la deriva.
 - **Sin cifras de divisas nuevas desde 2020**: las pruebas de M2 con datos reales usan origen
-  2019-12-31; el reporte solo muestra la TRM.
+  2019-12-31. El reporte solo muestra la TRM, salvo la sección 4 (correlaciones), que usa datos
+  hasta 2019-12-31; una prueba lo comprueba línea por línea, también en el apéndice.
+- **Prueba 1b en la CI y fin de línea.** La no regresión de `6506dbba3261` se había marcado
+  `lento` porque falló en la CI. Se quitó la marca (decisión del autor: `lento` es solo por
+  tiempo, y esta prueba es justo lo que la CI debe vigilar). Ahora compara todos los valores
+  numéricos y textos de `resultado.json` con tolerancia 0, excluyendo solo los campos que son
+  hashes de archivo (claves `hash`/`hash_*` o cadenas de 64 hexadecimales; hoy
+  `resultado.json` no tiene ninguno). «Mismos datos» se comprueba archivo por archivo con el
+  hash tal cual o, si no coincide, con el contenido llevado a CRLF. Una prueba aparte comprueba
+  que los hashes de archivo coinciden tal cual cuando el archivo tiene CRLF (Windows) y que, en
+  otro caso, la única diferencia es el fin de línea.
+- **Limitación de fondo (sin corregir en M2):** `motor/ficha.hash_archivo` depende del fin de
+  línea, así que los mismos datos dan hashes distintos en Windows (CRLF) y en Linux (LF): el
+  `trm.csv` procesado de la ficha vigente da `641393c5…` en Windows y `b985843a…` con LF.
+  Corrección propuesta, en un PR aparte después de fusionar M2: normalizar CRLF→LF en
+  `motor/ficha.hash_archivo`, igual que ya hace `hash_codigo`, solo para fichas nuevas (las viejas
+  se reproducen por su etiqueta). `backtest/ejecucion.hash_archivo` NO se toca: es el del
+  prerregistro de la prueba final.

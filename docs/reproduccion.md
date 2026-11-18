@@ -43,9 +43,12 @@ etiqueta `corrida-200b84c2c1a1` (debe dar `7fece992…`).
   cada ficha de `runs/*/ficha.json` tiene su etiqueta y el `hash_codigo` del árbol de ese commit
   (leído con `git ls-tree` y `git cat-file`, sin checkout) es el de la ficha. La única excepción
   admitida es `d6f052613b7a` (commit nulo, anterior al primer commit). Corre en la CI.
-- `tests/test_reproduccion.py::test_no_regresion_de_la_ficha_vigente_en_main` (`lento`, fuera de la
-  CI: la ficha hashea `data/processed/trm.csv` escrito en Windows, con CRLF; en Linux se
-  reconstruye con LF y el hash de datos no coincide; corre en la suite local completa): el caso
-  con la semilla y los parámetros de `6506dbba3261` da su `resultado.json` campo por campo, con
-  tolerancia 0 (valores normalizados a 12 cifras significativas, como se guardaron), sin pasar
-  por el chequeo de `hash_codigo`.
+- `tests/test_reproduccion.py::test_no_regresion_de_la_ficha_vigente_en_main` (corre en la CI):
+  el caso con la semilla y los parámetros de `6506dbba3261` da su `resultado.json` campo por
+  campo, con tolerancia 0 (valores normalizados a 12 cifras significativas, como se guardaron),
+  sin pasar por el chequeo de `hash_codigo` y excluyendo solo los campos que son hashes de
+  archivo. «Mismos datos» se comprueba con independencia del fin de línea: `motor/ficha.hash_archivo`
+  depende de él y la ficha hasheó `data/processed/trm.csv` escrito en Windows (CRLF).
+- `tests/test_reproduccion.py::test_hashes_de_archivo_de_la_ficha_vigente_con_crlf`: con CRLF
+  (Windows) los hashes de archivo coinciden tal cual; con LF (Linux), una vez llevado el
+  contenido a CRLF.

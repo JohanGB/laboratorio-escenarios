@@ -124,17 +124,29 @@ def test_correlacion_simulada_dentro_de_005_de_la_historica(vistas):
 
 def test_correlacion_filtrada_conserva_la_de_los_choques_estandarizados(vistas):
     """bootstrap_est_filtrado remuestrea z = r/σ con índices compartidos: la correlación simulada
-    de los factores está a ±0,05 de la histórica de los z (10.000 trayectorias). La de los X/COP
-    NO se exige: cada factor se reescala con su propia σ del origen y la correlación de los
-    cruces queda condicionada a esas σ (docs/decisiones.md, M2)."""
-    from laboratorio.modelos.bootstrap import residuos_estandarizados
+    de los factores (21 pasos, 10.000 trayectorias) está a ±0,005 de la histórica de los z (R_z).
+    Reescalar cada factor no cambia su correlación (CCC)."""
     s = C.simular_conjunto(vistas, SIETE, "bootstrap_est_filtrado", sims=10_000, semilla=20240501,
                            largo=21)
-    R = np.diff(np.log(C.niveles_factores(vistas, SIETE, s.muestra_desde).to_numpy()), axis=0)
-    Z = np.column_stack([residuos_estandarizados(np.r_[np.nan, R[:, j]]) for j in range(R.shape[1])])
-    hist_z = np.corrcoef(Z[np.isfinite(Z).all(axis=1)], rowvar=False)
-    dif = np.abs(_corr_pasos(s.acum_factores) - hist_z)
-    assert dif.max() <= 0.05, f"máxima diferencia {dif.max():.3f}"
+    c = C.correlaciones_paso1(vistas, SIETE)
+    assert c["factores"] == s.factores
+    dif = np.abs(_corr_pasos(s.acum_factores) - c["R_z"])
+    assert dif.max() <= 0.005, f"máxima diferencia {dif.max():.4f}"
+
+
+def test_correlacion_filtrada_de_los_cruces_es_la_implicita_ccc(vistas):
+    """Correlación condicional constante (docs/decisiones.md, M2): la correlación simulada de los
+    X/COP en el paso 1 está a ±0,01 de la implícita, Σ = D·C_z·D sobre los factores (D = σ del
+    origen) llevada a los cruces. Con 200.000 trayectorias y largo 1: con 10.000 el error de
+    Monte Carlo de una correlación en un solo paso ya es del orden de 0,01-0,03."""
+    s = C.simular_conjunto(vistas, SIETE, "bootstrap_est_filtrado", sims=200_000, semilla=20240501,
+                           largo=1)
+    c = C.correlaciones_paso1(vistas, SIETE)
+    sim = np.corrcoef(s.acum[0], rowvar=False)
+    dif = np.abs(sim - c["implicita"])
+    assert dif.max() <= 0.01, f"máxima diferencia {dif.max():.4f}"
+    # La implícita sí se aparta de la histórica incondicional (era el criterio equivocado).
+    assert np.abs(c["implicita"] - c["historica"]).max() > 0.05
 
 
 def test_semilla_fija_resultado_identico(vistas):
