@@ -365,22 +365,24 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
 - **Validación de `divisas.csv` en `data/validacion.json`** (clave `processed/divisas.csv`): la
   calcula `python -m laboratorio.datos` en memoria desde `data/raw` (misma función que la
   limpieza). `test_datos` ahora ignora las claves `processed/…` al comparar con `data/raw`, y
-  comprueba unicidad por (fecha, divisa) en `divisas.csv`. 19 saltos > 8 %, todos con causa
-  conocida (crisis mexicana, unificación china de 1994, devaluación brasileña, octubre de
-  2008, piso suizo); ninguno se borra.
+  comprueba unicidad por (fecha, divisa) en `divisas.csv`. 19 saltos > 8 %; ninguno se borra.
+  *Corregido el 17-nov-2026*: la versión anterior decía «todos con causa conocida» y nombraba
+  causas sin fuente (entre ellas, ninguna verificada para el real en 2002 ni para el yen en
+  2020). Se quitó la atribución; las causas solo se escribirán con fuente citada.
 - **Reporte `reports/fase0_divisas.md`**: lee los datos y descarta todo lo posterior al
   31-dic-2019 al cargarlos. Cada cifra lleva `#hash`; los insumos se hashean solo con las filas
   anteriores al corte, así que cambiar datos posteriores no cambia el reporte (hay prueba). El
   reporte no escribe ningún año desde 2020 (hay prueba con expresión regular). Tres figuras:
   niveles base 100, volatilidad móvil (63 obs.) y correlaciones 2005-2014 / 2015-2019.
 - **Desviación menor**: `validacion.json` (salida de `python -m laboratorio.datos`) también lista
-  los saltos posteriores a 2019 (p. ej. el yen en marzo de 2020). Es un archivo de datos, no el
+  saltos posteriores a 2019 (uno, de JPY/COP). Es un archivo de datos, no el
   reporte exploratorio; se deja así para que la revisión manual sea completa.
 - **`data/raw/MANIFEST.csv`**: solo se añadieron seis filas al final, como pide M1 paso 1
   (`git diff`: 6 inserciones, 0 borrados). No entra en ningún hash de datos publicado.
 - **Qué se vio de 2020 en adelante de las divisas nuevas (para declararlo en M3)**: al
   comprobar que las series siguen vivas, los cinco últimos valores de cada una (9 al 13 de
   noviembre de 2026) y la última línea de cada descarga; al revisar `validacion.json`, la lista
-  de saltos > 8 %, que incluye uno solo posterior a 2019 (JPY/COP, 2020-03-10, +9,0 %); y los
-  conteos de días perdidos de `limpieza.json`, que abarcan toda la serie. No se calculó ni se
+  de saltos > 8 %, que incluye uno solo posterior a 2019 (JPY/COP, 2020-03-10; su tamaño se
+  vio y no se repite aquí); y los conteos de días perdidos de `limpieza.json`, que abarcan
+  toda la serie. No se calculó ni se
   miró ninguna otra estadística, figura ni tabla de 2020 en adelante.
