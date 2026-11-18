@@ -269,8 +269,8 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
   `runs/prueba_final*/` y `trm.csv` es el de la prueba final. Lo importante y lo menor que no se
   corrigió queda listado en `docs/estado.md`.
 
-## 17-nov-2026 · M0 (higiene del repositorio, Brújula FX)
-- **Prompt que manda**: `docs/prompts/PROMPT_BRUJULA_FX.md`. Los cuatro prompts anteriores se
+## 17-nov-2026 · M0 (higiene del repositorio, Vektor FX)
+- **Prompt que manda**: `docs/prompts/PROMPT_VEKTOR_FX.md`. Los cuatro prompts anteriores se
   movieron con `git mv` a `docs/prompts/` sin editarlos (se citan entre sí por nombre, y siguen
   juntos). `CLAUDE.md` apunta a las rutas nuevas (hay prueba de que existen).
 - **a. Instalación**: `pyproject.toml` con `[build-system]` (setuptools ≥ 61), `numpy` explícito,
@@ -299,3 +299,21 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
   (165 s) y `test_markov::test_calibrado_en_su_proceso_generador` (35 s). La verificación de
   hashes de la prueba final no entra en CI.
 - **f. Licencia**: pendiente de la respuesta del autor; no se creó `LICENSE`.
+
+## 17-nov-2026 · M0, ajustes del autor (nombre, licencia, flujo de ramas)
+- **Nombre público: «Vektor FX»** (decisión del autor; ya era el de la ficha del portafolio), con
+  título «Vektor FX — Laboratorio de Escenarios» (se aplica al README en M7) y repositorio
+  sugerido `vektor-fx`. El paquete sigue siendo `laboratorio`. Prompt renombrado con `git mv` a
+  `docs/prompts/PROMPT_VEKTOR_FX.md`. Se reemplazó el nombre anterior en `CLAUDE.md`,
+  `docs/decisiones.md`, `docs/estado.md` y el prompt. Ningún archivo intocable lo mencionaba
+  (`docs/prerregistro.md`, etiquetas, `runs/`): comprobado con `git grep` de las variantes con y
+  sin tilde. `hash_codigo` sin cambios (cfb1ad53…, ningún `.py` de `src/` tocado).
+- **Prompt, M1 paso 6**: el comando que genera `data/processed` es
+  `python -m laboratorio.datos.limpieza` (desviación 4 de M0, aceptada por el autor).
+- **Licencias**: `LICENSE` (MIT, Johan Esteban García Bautista, 2026) para código, pruebas y
+  configuración; `LICENSE-docs` (CC BY 4.0, texto oficial de creativecommons.org sin cambios)
+  para `reports/` y `docs/`. `data/raw/` conserva los términos de sus fuentes; el README lo dice y
+  extiende lo mismo a `data/processed/` (derivado de raw). Sin decidir: `runs/`, `data/respaldo/`
+  y `data/supuestos/` (salidas y supuestos; no están en ninguna de las dos listas del autor).
+- **Flujo**: desde M0 cada fase va en su rama (`m0-higiene`, `m1-datos`, `m2-motor`…) con PR a
+  `main`; se fusiona con merge commit (sin squash) solo con la CI en verde.

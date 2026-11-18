@@ -1,6 +1,6 @@
 # Estado
-Brújula FX (fases M0-M7, docs/prompts/PROMPT_BRUJULA_FX.md). M0 hecho (17-nov), en revisión del autor; SIGUE M1 (datos multidivisa) tras su visto bueno. Decisiones en docs/decisiones.md.
-- M0: pyproject instalable (`pip install -e ".[dev]"`), requirements-prueba-final.txt, prompts en docs/prompts/, conftest reconstruye data/processed (I7 cerrado), CI en .github/workflows/pruebas.yml (`-m "not lento"`), runs/*.log se quedan. PENDIENTE: licencia (pregunta al autor) y CI verde en GitHub (falta push).
+Vektor FX (fases M0-M7, docs/prompts/PROMPT_VEKTOR_FX.md). M0 aprobado (17-nov), rama `m0-higiene` con PR a main; SIGUE M1 (rama `m1-datos`) tras el visto bueno del autor. Cada fase: rama + PR, terminada solo con CI en verde, merge sin squash. Decisiones en docs/decisiones.md.
+- M0: pyproject instalable (`pip install -e ".[dev]"`), requirements-prueba-final.txt, prompts en docs/prompts/, conftest reconstruye data/processed (I7 cerrado), CI en .github/workflows/pruebas.yml (`-m "not lento"`), runs/*.log se quedan. Licencias: LICENSE (MIT, código) y LICENSE-docs (CC BY 4.0, reports/ y docs/); data/raw con términos de sus fuentes. Sin decidir: licencia de runs/, data/respaldo/, data/supuestos/.
 - Suite: 372 pruebas pasan, 0 saltadas (`pytest -q -x`, 7 min 48 s, 17-nov); 2 marcadas `lento`. El README cita el número y hay prueba.
 - Git: rama main; `* -text` salvo `*.py` y `docs/prerregistro*.md` (`eol=lf`). data/raw versionado; data/processed, runs/**/*.csv.gz, *.egg-info y .playwright-mcp ignorados. Repo PÚBLICO.
 - Datos: data/raw (inmutable) -> data/processed (`python -m laboratorio.datos.limpieza`). trm.csv: 8387 obs., 1991-12-02 a 2026-11-14. EDA en reports/fase0.md.

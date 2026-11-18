@@ -102,3 +102,14 @@ Documentos clave: [prerregistro](docs/prerregistro.md) · [decisiones](docs/deci
 - A 63 días o más hay muy pocas ventanas independientes; casi cualquier cobertura es «compatible».
 - Las variables externas y las tasas entran por rezago; sus revisiones no se modelan.
 - Proyecto personal de portafolio, sin respaldo de ninguna entidad financiera.
+
+## Licencia
+
+- **Código** (`src/`, `tests/` y archivos de configuración como `pyproject.toml`,
+  `requirements-prueba-final.txt` y `.github/`): [MIT](LICENSE).
+- **Reportes, documentación y figuras** (`reports/`, incluidas sus figuras, y `docs/`):
+  [CC BY 4.0](LICENSE-docs).
+- **Datos de `data/raw/`**: no les aplica ninguna de las dos. Conservan los términos de sus
+  fuentes (Superintendencia Financiera de Colombia, Banco de la República, DANE y FRED del
+  Banco de la Reserva Federal de San Luis); consúltalos en cada fuente antes de reutilizarlos.
+  Lo mismo vale para `data/processed/`, que se deriva de ellos.

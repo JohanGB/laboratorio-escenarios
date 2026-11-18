@@ -1,8 +1,8 @@
-# PROMPT — Brújula FX · Laboratorio de Escenarios multidivisa (v1, 17-nov-2026)
+# PROMPT — Vektor FX · Laboratorio de Escenarios multidivisa (v1, 17-nov-2026)
 
 > Pégalo en Claude Code desde la raíz del repositorio
 > (`C:\Users\johan\Downloads\Life\IndeProjex\laboratorio-escenarios`). Guárdalo también como
-> `PROMPT_BRUJULA_FX.md` en la raíz: a partir de hoy es el archivo que manda para el trabajo nuevo.
+> `PROMPT_VEKTOR_FX.md` en la raíz: a partir de hoy es el archivo que manda para el trabajo nuevo.
 
 ---
 
@@ -21,7 +21,7 @@ base de todo lo que sigue y **no se reinterpreta**:
 - El motor del caso (`bootstrap_est_filtrado`) arrastra la deriva de la banda cambiaria
   amplificada ≈ 2,1 veces (F5b).
 
-Objetivo de esta fase: convertir el laboratorio en **Brújula FX**, una herramienta que
+Objetivo de esta fase: convertir el laboratorio en **Vektor FX**, una herramienta que
 (1) simula escenarios conjuntos para varias divisas contra el peso colombiano,
 (2) pronostica solo donde la evidencia lo permite, (3) **apoya decisiones** comparando
 estrategias, sin recomendarlas, y (4) lo muestra en una página web estática.
@@ -33,7 +33,7 @@ Reglas:
    `runs/prueba_final*/`, `runs/backtest_*/`, `data/raw/` existente y `data/respaldo/`. Lo nuevo
    va en archivos y carpetas nuevas. Si una tarea parece exigir tocarlos, detente y pregunta.
 2. **Nombre público, no de paquete.** El paquete de Python sigue llamándose `laboratorio`
-   (renombrarlo rompería importaciones, fichas y reproducciones). «Brújula FX» es el nombre del
+   (renombrarlo rompería importaciones, fichas y reproducciones). «Vektor FX» es el nombre del
    README, de la web y del repositorio; el subtítulo es «Laboratorio de Escenarios».
 3. **«Asesorar» = comparar.** Ningún texto, figura o salida dice «compre», «recomendamos» ni
    «la mejor opción». Se dice «con tu tolerancia, estas estrategias cumplen; estas no» y siempre
@@ -116,7 +116,7 @@ Pasos:
    - EUR existe desde el 4-ene-1999.
    - COP: la banda hasta el 25-sep-1999 ya está declarada.
 6. Salida: `data/processed/divisas.csv` (formato largo: `fecha, divisa, cop_por_unidad, ret_log,
-   regimen`) generado por `python -m laboratorio.datos`, más validaciones en
+   regimen`) generado por `python -m laboratorio.datos.limpieza`, más validaciones en
    `data/validacion.json` (positivos, sin duplicados, saltos > 8 % diarios listados para revisión
    manual, nunca borrados).
 7. **Análisis exploratorio** en `reports/fase0_divisas.md` con como máximo tres figuras:
@@ -253,7 +253,7 @@ fichas `runs/6506dbba3261` y `runs/200b84c2c1a1` deben seguir dando «COINCIDE»
 
 ---
 
-## M6. Página web estática (Brújula FX)
+## M6. Página web estática (Vektor FX)
 
 Sigue la sección 9 de `docs/prompts/PROMPT_FINANZAS.md` (tres paneles: Supuestos, Resultado,
 Explicación; máximo tres gráficas por vista; pensada primero para celular).
@@ -278,14 +278,14 @@ Explicación; máximo tres gráficas por vista; pensada primero para celular).
 
 ## M7. README y presentación del portafolio
 
-1. Título: «Brújula FX — Laboratorio de Escenarios». Primera línea: qué pregunta responde
+1. Título: «Vektor FX — Laboratorio de Escenarios». Primera línea: qué pregunta responde
    (¿qué rango de resultados es razonable para varias divisas y qué tan confiable es ese rango?).
 2. Conserva intactas las secciones «El resultado, sin adornos», «La cifra que más cuidado merece»
    y «Cómo se garantiza que no se hizo trampa»; añade debajo los resultados de M3 (sean los que
    sean) y el estado de la evaluación prospectiva.
 3. Captura de la web y enlace a GitHub Pages en la parte superior.
 4. Actualiza `docs/uso_de_ia.md` con lo hecho en estas fases.
-5. Renombrar el repositorio en GitHub (`brujula-fx`) es decisión mía: pregúntame al final, no lo
+5. Renombrar el repositorio en GitHub (`vektor-fx`) es decisión mía: pregúntame al final, no lo
    hagas tú.
 
 ---
