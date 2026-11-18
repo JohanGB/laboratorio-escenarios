@@ -6,7 +6,9 @@ a) Cada ficha de runs/*/ficha.json tiene la etiqueta `corrida-<id>` y el `hash_c
    rompe la CI.
 b) No regresión en main: el caso, con la semilla y los parámetros de la ficha vigente
    6506dbba3261, da su resultado.json campo por campo, con tolerancia 0, sin pasar por el
-   chequeo de `hash_codigo`. Tarda unos 5 s: no se marca `lento` y corre en la CI.
+   chequeo de `hash_codigo`. Tarda unos 5 s, pero va marcada `lento` (fuera de la CI): el
+   `hash_datos` de la ficha se calculó en Windows sobre data/processed/trm.csv con CRLF, y la
+   CI (Linux) lo reconstruye con LF, así que la condición «mismos datos» no se cumple allí.
 """
 from __future__ import annotations
 
@@ -93,6 +95,7 @@ def test_reproduccion_md_lista_cada_ficha():
     assert "docs/reproduccion.md" in (RAIZ / "README.md").read_text(encoding="utf-8")
 
 
+@pytest.mark.lento
 def test_no_regresion_de_la_ficha_vigente_en_main():
     ficha = cargar(RAIZ / "runs" / VIGENTE / "ficha.json")
     p = caso.rutas(RAIZ)

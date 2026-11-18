@@ -401,8 +401,10 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
     prueba de etiquetas la admite como única excepción, con esas dos condiciones comprobadas.
   - La prueba de etiquetas no se marca `lento` (tarda menos de 1 s): así corre en la CI y una
     ficha nueva sin etiqueta la rompe. La CI hace checkout con historial completo
-    (`fetch-depth: 0`) para tener las etiquetas. La prueba de no regresión tarda unos 5 s y
-    tampoco se marca.
+    (`fetch-depth: 0`) para tener las etiquetas. La prueba de no regresión tarda unos 5 s, pero
+    se marcó `lento` después de que fallara en la CI: el `hash_datos` de la ficha incluye
+    `data/processed/trm.csv` tal como lo escribe Windows (CRLF, `641393c5…`); en Linux se
+    reconstruye con LF y el hash no coincide. Corre en la suite local completa (`pytest -q -x`).
 - **Criterio de la alineación TRM–FRED**: se eligió el desfase con la mayor correlación **en
   valor absoluto** entre los rendimientos logarítmicos de la TRM (COP por USD) y de «USD por X».
   El signo negativo es el esperado: si el dólar sube frente al peso, también suele subir frente a

@@ -55,7 +55,7 @@ el reporte las presenta juntas. Se publicó el hallazgo en vez de esconderlo.
 - **Auditoría independiente** de la prueba final (`docs/auditoria_independiente.md`): sus
   hallazgos se corrigieron o quedaron cubiertos por pruebas (`tests/test_auditoria_h1.py`).
 - 424 pruebas automáticas (`pytest`), incluidas pruebas de fuga de información; la integración
-  continua de GitHub corre todas salvo las dos marcadas como lentas.
+  continua de GitHub corre todas salvo las tres marcadas como lentas.
 
 ## Ejecutarlo (Windows, PowerShell)
 
