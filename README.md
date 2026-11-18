@@ -109,6 +109,10 @@ Documentos clave: [prerregistro](docs/prerregistro.md) · [decisiones](docs/deci
   `requirements-prueba-final.txt` y `.github/`): [MIT](LICENSE).
 - **Reportes, documentación y figuras** (`reports/`, incluidas sus figuras, y `docs/`):
   [CC BY 4.0](LICENSE-docs).
+- **Resultados y supuestos del proyecto** (`runs/`, `data/respaldo/` y `data/supuestos/`):
+  [CC BY 4.0](LICENSE-docs), como los reportes. `runs/` y `data/respaldo/` se calculan a partir
+  de los datos públicos de abajo; la licencia cubre lo que aporta el proyecto, y las cifras
+  de origen siguen sujetas a los términos de sus fuentes.
 - **Datos de `data/raw/`**: no les aplica ninguna de las dos. Conservan los términos de sus
   fuentes (Superintendencia Financiera de Colombia, Banco de la República, DANE y FRED del
   Banco de la Reserva Federal de San Luis); consúltalos en cada fuente antes de reutilizarlos.
