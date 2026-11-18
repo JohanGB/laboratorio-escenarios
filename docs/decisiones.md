@@ -457,3 +457,50 @@ Formato: fecha · decisión · alternativa descartada · motivo. Las decisiones 
   un mensaje que pide hacer commit del registro y volver a correr. La CLI devuelve código 3 con
   el mensaje. `data/processed/` está ignorado por git (se reconstruye desde `data/raw`), así que
   no cuenta como cambio. Descartado: hacer commit automático (tocaría el historial del autor).
+
+## 17-nov-2026 · M2 (motor conjunto multidivisa)
+- **Refactorización de `modelos/bootstrap.trayectorias`** en `indices_bloques` (antes
+  `indices_estacionarios`, que queda como alias) y `aplicar_indices` (una serie `(n,)` o varias
+  `(n, k)` con los mismos índices). Ningún número cambió: tres huellas SHA-256 de la salida
+  anterior (entradas exactas, sin depender de la plataforma) y la prueba de no regresión de la
+  ficha `6506dbba3261` pasan con el código nuevo; con una sola serie, `aplicar_indices` y
+  `simular_conjunto(("USD",))` reproducen `trayectorias` bit a bit.
+- **`motor/conjunto.simular_conjunto`**: factores TRM y «USD por X» (= X/COP ÷ TRM en la misma
+  fecha de TRM de `divisas.csv`), fechas comunes sin relleno, un rendimiento de una fecha común a
+  la siguiente (puede abarcar un festivo de EE. UU.), una sola secuencia de índices para todos.
+  X/COP = suma de logaritmos: triangulación exacta (prueba con tolerancia relativa 1e-12).
+  Generador `default_rng([semilla, n_fechas − 1])`. Etiqueta en el objeto y en el reporte:
+  «motor conjunto, sin evaluación fuera de muestra hasta M3». `montecarlo.simular` no cambia.
+- **Muestra común**: primera fecha posterior a la última fila con régimen `fijo`, `banda` o
+  `banda_cop` de cada divisa de la corrida (USD incluido, así nunca entra la banda colombiana).
+  Con CNY es el 2005-07-23 (TRM del sábado con el H.10 del viernes 22-jul-2005). El piso suizo
+  (2011-2015) queda dentro: es un episodio con la divisa cotizando, no un régimen sin flotación.
+  Un `desde` anterior a la muestra común es un error.
+- **Variante filtrada**: cada factor con su propia σ EWMA (0,94), su σ̄² y su ρ, calculadas solo
+  con los rendimientos de la muestra común (arranque de la EWMA como en `varianza_ewma`).
+  Lectura conservadora: nada anterior a la muestra entra, ni siquiera como calentamiento.
+- **Bloque común**: Politis-White de la TRM en la muestra común (máximo entre la serie y su
+  valor absoluto, como `ajustar`). La alternativa `bloque="mediana"` (mediana de los factores de
+  la corrida) está implementada y probada, pero no se reporta hasta M3: depende de las series de
+  las divisas nuevas hasta el origen.
+- **Desviación de la prueba 6 (correlación ±0,05) en la variante filtrada — decisión del
+  autor pendiente.** Con `bootstrap_est` la prueba pasa tal como está escrita: con origen
+  2019-12-31 y 10.000 trayectorias, la correlación simulada de las siete X/COP queda a 0,008
+  como máximo de la histórica. Con `bootstrap_est_filtrado` no pasa: la diferencia máxima es
+  0,194. Diagnóstico (mismo origen y semilla): la correlación simulada de los factores queda a
+  0,005 de la histórica de los choques estandarizados z (lo que se remuestrea), pero la de los z
+  difiere hasta 0,094 de la de los rendimientos, y al reescalar cada factor con su propia σ del
+  origen (TRM a 0,73 de su σ de largo plazo; cinco de los seis «USD por X» entre 0,43 y 0,57; el
+  yuan a 1,02) la correlación de los cruces queda condicionada a las σ del origen. No se relajó
+  la prueba en silencio: para la variante filtrada se prueba lo que el mecanismo garantiza
+  (factores frente a la correlación histórica de los z, ±0,05), y la X/COP queda sin exigir
+  hasta que el autor decida (opciones: aceptar la correlación condicional, reescalar con una σ
+  común, o exigir la prueba solo a `bootstrap_est`). Cifras de diagnóstico sin `#hash`, todas con
+  datos hasta 2019; se reproducen con `tests/test_conjunto.py`.
+- **Reporte `reports/m2_conjunto.md`** (solo TRM; prueba de que ninguna línea con cifra nombra
+  una divisa nueva): mismo origen (2026-11-14), semilla y 10.000 trayectorias. El conjunto da una
+  mediana más baja que el motor evaluado (−6,4 % a 252 días) y bandas algo más estrechas (0,89
+  veces a 252); la deriva con que entra cada muestra es 0,0110 % diario frente a 0,0358 %
+  (cifras con `#hash` en el reporte), coherente con F5b: la banda arrastra la deriva.
+- **Sin cifras de divisas nuevas desde 2020**: las pruebas de M2 con datos reales usan origen
+  2019-12-31; el reporte solo muestra la TRM.

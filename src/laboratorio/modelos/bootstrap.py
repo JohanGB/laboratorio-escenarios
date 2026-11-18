@@ -69,13 +69,14 @@ def longitud_bloque_pw(x: np.ndarray) -> float:
     return float(np.clip(b, 1.0, b_max))
 
 
-def indices_estacionarios(rng: np.random.Generator, n: int, largo: int, sims: int,
-                          bloque: float) -> np.ndarray:
+def indices_bloques(rng: np.random.Generator, n: int, largo: int, sims: int,
+                    bloque: float) -> np.ndarray:
     """Índices (largo, sims) del bootstrap estacionario circular sobre 0..n−1.
 
     En cada paso, con probabilidad p = 1/bloque se salta a un índice uniforme; si no, se avanza
     uno (circular). Con bloque = 1 (p = 1) los índices son exactamente los sorteos uniformes:
-    bootstrap simple.
+    bootstrap simple. Una sola secuencia de índices sirve para varias series a la vez (índices
+    de fecha compartidos, motor/conjunto.py).
     """
     p = 1.0 / max(float(bloque), 1.0)
     saltos = rng.integers(0, n, size=(largo, sims))
@@ -88,18 +89,36 @@ def indices_estacionarios(rng: np.random.Generator, n: int, largo: int, sims: in
     return idx
 
 
+indices_estacionarios = indices_bloques     # nombre anterior (F1-F5)
+
+
+def aplicar_indices(x: np.ndarray, idx: np.ndarray, escala: np.ndarray | None = None) -> np.ndarray:
+    """Acumula los pasos x[idx]: fila k = suma de los k+1 primeros pasos.
+
+    x: (n,) una serie o (n, k) k series con las mismas fechas (sin NaN).
+    idx: (largo, sims) de `indices_bloques`; la misma fila de x para todas las series.
+    escala: desvío por paso, (largo,) para una serie o (largo, k) para k series (variante filtrada).
+    Devuelve (largo, sims) o (largo, sims, k).
+    """
+    x = np.asarray(x, float)
+    pasos = x[idx]
+    if escala is not None:
+        e = np.asarray(escala, float)
+        pasos = pasos * (e[:, None] if x.ndim == 1 else e[:, None, :])
+    return np.cumsum(pasos, axis=0)
+
+
 def trayectorias(x: np.ndarray, largo: int, sims: int, bloque: float, rng: np.random.Generator,
                  escala: np.ndarray | None = None) -> np.ndarray:
     """Rendimientos logarítmicos ACUMULADOS (largo, sims): fila k = suma de los k+1 primeros pasos.
 
     x: serie a remuestrear (rendimientos o residuos estandarizados, sin NaN).
     escala: desvío por paso (largo,) que multiplica cada paso remuestreado (variante filtrada).
+    Es `aplicar_indices(x, indices_bloques(...), escala)`; los números no cambiaron con la
+    refactorización de M2 (hay prueba bit a bit).
     """
     x = np.asarray(x, float)
-    pasos = x[indices_estacionarios(rng, len(x), largo, sims, bloque)]
-    if escala is not None:
-        pasos = pasos * np.asarray(escala, float)[:, None]
-    return np.cumsum(pasos, axis=0)
+    return aplicar_indices(x, indices_bloques(rng, len(x), largo, sims, bloque), escala)
 
 
 def _sigma2_ewma(r: np.ndarray) -> np.ndarray:
